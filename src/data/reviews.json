@@ -1,0 +1,52 @@
+[
+  {
+    "id": "rev1",
+    "productId": "1",
+    "userId": "user1",
+    "userName": "Ahmed Mohammed",
+    "rating": 5,
+    "comment": "Excellent battery! Works perfectly with my Toyota. Fast delivery and great service.",
+    "commentAr": "بطارية ممتازة! تعمل بشكل مثالي مع سيارتي تويوتا. توصيل سريع وخدمة رائعة.",
+    "date": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "rev2",
+    "productId": "1",
+    "userId": "user2",
+    "userName": "Khalid Al-Rashid",
+    "rating": 4,
+    "comment": "Good quality battery. Installation was quick. Recommended!",
+    "commentAr": "بطارية ذات جودة جيدة. التركيب كان سريعاً. موصى به!",
+    "date": "2024-01-20T14:15:00Z"
+  },
+  {
+    "id": "rev3",
+    "productId": "2",
+    "userId": "user3",
+    "userName": "Fatima Hassan",
+    "rating": 5,
+    "comment": "Best battery I've ever used. Long warranty and excellent performance.",
+    "commentAr": "أفضل بطارية استخدمتها على الإطلاق. ضمان طويل وأداء ممتاز.",
+    "date": "2024-02-01T09:00:00Z"
+  },
+  {
+    "id": "rev4",
+    "productId": "3",
+    "userId": "user1",
+    "userName": "Ahmed Mohammed",
+    "rating": 4,
+    "comment": "Great value for money. The truck battery is very durable.",
+    "commentAr": "قيمة رائعة مقابل المال. بطارية الشاحنة متينة جداً.",
+    "date": "2024-02-10T16:45:00Z"
+  },
+  {
+    "id": "rev5",
+    "productId": "4",
+    "userId": "user4",
+    "userName": "Omar Saleh",
+    "rating": 5,
+    "comment": "Eco-friendly and powerful. Perfect for my hybrid car.",
+    "commentAr": "صديقة للبيئة وقوية. مثالية لسيارتي الهجينة.",
+    "date": "2024-02-15T11:20:00Z"
+  }
+]

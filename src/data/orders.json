@@ -1,0 +1,77 @@
+[
+  {
+    "id": "ORD-2024-001",
+    "userId": "user123",
+    "date": "2024-03-15T10:30:00Z",
+    "status": "delivered",
+    "items": [
+      {
+        "productId": "1",
+        "name": "Premium AGM Battery 12V 75Ah",
+        "quantity": 1,
+        "price": 189.99
+      }
+    ],
+    "subtotal": 189.99,
+    "shipping": 15.00,
+    "total": 204.99,
+    "deliveryAddress": {
+      "name": "John Doe",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "city": "New York",
+      "zipCode": "10001"
+    },
+    "paymentMethod": "cashOnDelivery"
+  },
+  {
+    "id": "ORD-2024-002",
+    "userId": "user123",
+    "date": "2024-03-20T14:15:00Z",
+    "status": "shipped",
+    "items": [
+      {
+        "productId": "3",
+        "name": "Compact Car Battery 12V 60Ah",
+        "quantity": 2,
+        "price": 129.99
+      }
+    ],
+    "subtotal": 259.98,
+    "shipping": 15.00,
+    "total": 274.98,
+    "deliveryAddress": {
+      "name": "John Doe",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "city": "New York",
+      "zipCode": "10001"
+    },
+    "paymentMethod": "onlinePayment"
+  },
+  {
+    "id": "ORD-2024-003",
+    "userId": "user123",
+    "date": "2024-03-25T09:00:00Z",
+    "status": "pending",
+    "items": [
+      {
+        "productId": "4",
+        "name": "Performance SUV Battery 12V 90Ah",
+        "quantity": 1,
+        "price": 249.99
+      }
+    ],
+    "subtotal": 249.99,
+    "shipping": 15.00,
+    "total": 264.99,
+    "deliveryAddress": {
+      "name": "John Doe",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "city": "New York",
+      "zipCode": "10001"
+    },
+    "paymentMethod": "cashOnDelivery"
+  }
+]

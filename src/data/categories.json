@@ -1,0 +1,38 @@
+[
+  {
+    "id": "agm",
+    "name": "AGM Batteries",
+    "nameAr": "بطاريات AGM",
+    "count": 24
+  },
+  {
+    "id": "standard",
+    "name": "Standard Batteries",
+    "nameAr": "بطاريات عادية",
+    "count": 45
+  },
+  {
+    "id": "premium",
+    "name": "Premium Batteries",
+    "nameAr": "بطاريات فاخرة",
+    "count": 18
+  },
+  {
+    "id": "heavy-duty",
+    "name": "Heavy Duty",
+    "nameAr": "للاستخدام الشاق",
+    "count": 12
+  },
+  {
+    "id": "hybrid",
+    "name": "Hybrid Batteries",
+    "nameAr": "بطاريات هجينة",
+    "count": 8
+  },
+  {
+    "id": "marine",
+    "name": "Marine Batteries",
+    "nameAr": "بطاريات بحرية",
+    "count": 6
+  }
+]

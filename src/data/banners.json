@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "title": "Summer Sale - Up to 40% Off",
+    "titleAr": "تخفيضات الصيف - حتى 40% خصم",
+    "description": "Get the best deals on premium car batteries",
+    "descriptionAr": "احصل على أفضل العروض على بطاريات السيارات الفاخرة",
+    "image": "/placeholder.svg",
+    "link": "/catalog",
+    "active": true
+  },
+  {
+    "id": "2",
+    "title": "Free Installation Service",
+    "titleAr": "خدمة تركيب مجانية",
+    "description": "Professional installation at no extra cost",
+    "descriptionAr": "تركيب احترافي بدون تكلفة إضافية",
+    "image": "/placeholder.svg",
+    "link": "/offers",
+    "active": true
+  },
+  {
+    "id": "3",
+    "title": "Extended Warranty Available",
+    "titleAr": "ضمان ممتد متاح",
+    "description": "Protect your investment with extended warranty",
+    "descriptionAr": "احمِ استثمارك بضمان ممتد",
+    "image": "/placeholder.svg",
+    "link": "/catalog",
+    "active": true
+  }
+]

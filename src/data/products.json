@@ -1,0 +1,140 @@
+[
+  {
+    "id": "1",
+    "name": "Premium AGM Battery 12V 75Ah",
+    "brand": "BOSCH",
+    "category": "AGM",
+    "price": 189.99,
+    "oldPrice": 229.99,
+    "image": "/images/products/battery-bosch-agm.png",
+    "rating": 4.8,
+    "reviews": 245,
+    "stock": 15,
+    "description": "High-performance AGM battery with advanced technology for superior power and reliability. Perfect for modern vehicles with high electrical demands.",
+    "specifications": {
+      "voltage": "12V",
+      "capacity": "75Ah",
+      "cca": "750A",
+      "weight": "18kg",
+      "warranty": "3 years"
+    },
+    "features": ["Maintenance-free", "Vibration resistant", "Fast charging", "Deep cycle"],
+    "bestSeller": true,
+    "isNew": false
+  },
+  {
+    "id": "2",
+    "name": "Heavy Duty Truck Battery 24V 100Ah",
+    "brand": "VARTA Germany",
+    "category": "Heavy Duty",
+    "price": 329.99,
+    "oldPrice": null,
+    "image": "/images/products/battery-varta-truck.png",
+    "rating": 4.6,
+    "reviews": 128,
+    "stock": 8,
+    "description": "Industrial-grade battery designed for heavy-duty trucks and commercial vehicles. Built to withstand extreme conditions.",
+    "specifications": {
+      "voltage": "24V",
+      "capacity": "100Ah",
+      "cca": "950A",
+      "weight": "35kg",
+      "warranty": "4 years"
+    },
+    "features": ["Extra heavy duty", "Commercial grade", "Extended life", "Weather resistant"],
+    "bestSeller": false,
+    "isNew": true
+  },
+  {
+    "id": "3",
+    "name": "Compact Car Battery 12V 60Ah",
+    "brand": "AC Delco",
+    "category": "Standard",
+    "price": 129.99,
+    "oldPrice": 149.99,
+    "image": "/images/products/battery-acdelco.png",
+    "rating": 4.5,
+    "reviews": 342,
+    "stock": 24,
+    "description": "Reliable and affordable battery solution for compact and mid-size vehicles. Excellent value for money.",
+    "specifications": {
+      "voltage": "12V",
+      "capacity": "60Ah",
+      "cca": "600A",
+      "weight": "14kg",
+      "warranty": "2 years"
+    },
+    "features": ["Cost-effective", "Reliable performance", "Quick installation", "Low maintenance"],
+    "bestSeller": true,
+    "isNew": false
+  },
+  {
+    "id": "4",
+    "name": "Performance SUV Battery 12V 90Ah",
+    "brand": "Amaron",
+    "category": "Premium",
+    "price": 249.99,
+    "oldPrice": 299.99,
+    "image": "/images/products/battery-amaron.png",
+    "rating": 4.9,
+    "reviews": 189,
+    "stock": 12,
+    "description": "Premium battery engineered for SUVs and high-performance vehicles. Maximum power output with extended lifespan.",
+    "specifications": {
+      "voltage": "12V",
+      "capacity": "90Ah",
+      "cca": "850A",
+      "weight": "22kg",
+      "warranty": "5 years"
+    },
+    "features": ["Premium quality", "High performance", "Extended warranty", "Temperature resistant"],
+    "bestSeller": true,
+    "isNew": false
+  },
+  {
+    "id": "5",
+    "name": "Hybrid Vehicle Battery 12V 70Ah",
+    "brand": "Panasonic",
+    "category": "Hybrid",
+    "price": 279.99,
+    "oldPrice": null,
+    "image": "/images/products/battery-panasonic.png",
+    "rating": 4.7,
+    "reviews": 95,
+    "stock": 6,
+    "description": "Specially designed for hybrid and electric-start vehicles. Optimized for frequent charge-discharge cycles.",
+    "specifications": {
+      "voltage": "12V",
+      "capacity": "70Ah",
+      "cca": "700A",
+      "weight": "16kg",
+      "warranty": "4 years"
+    },
+    "features": ["Hybrid compatible", "Smart charging", "Eco-friendly", "Long cycle life"],
+    "bestSeller": false,
+    "isNew": true
+  },
+  {
+    "id": "6",
+    "name": "Marine Deep Cycle Battery 12V 110Ah",
+    "brand": "VARTA Spain",
+    "category": "Marine",
+    "price": 359.99,
+    "oldPrice": 399.99,
+    "image": "/images/products/battery-marine.png",
+    "rating": 4.8,
+    "reviews": 67,
+    "stock": 5,
+    "description": "Marine-grade deep cycle battery perfect for boats and recreational vehicles. Water-resistant construction.",
+    "specifications": {
+      "voltage": "12V",
+      "capacity": "110Ah",
+      "cca": "800A",
+      "weight": "28kg",
+      "warranty": "3 years"
+    },
+    "features": ["Marine certified", "Deep cycle", "Corrosion resistant", "Dual purpose"],
+    "bestSeller": false,
+    "isNew": false
+  }
+]

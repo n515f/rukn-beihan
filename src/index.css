@@ -1,0 +1,361 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    /* Gold accent as primary */
+    --primary: 43 74% 49%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 43 90% 58%;
+
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 12%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 42%;
+
+    --accent: 43 74% 49%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 43 74% 49%;
+
+    --radius: 0.75rem;
+
+    /* Premium gradient overlays */
+    --gradient-gold: linear-gradient(135deg, hsl(43 74% 49%) 0%, hsl(43 90% 58%) 50%, hsl(43 74% 49%) 100%);
+    --gradient-gold-subtle: linear-gradient(135deg, hsl(43 74% 49% / 0.1) 0%, hsl(43 90% 58% / 0.2) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(0 0% 0% / 0.7) 0%, hsl(0 0% 0% / 0.3) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 98%) 0%, hsl(43 30% 96%) 50%, hsl(0 0% 98%) 100%);
+    
+    /* Shadows */
+    --shadow-gold: 0 8px 32px -8px hsl(43 74% 49% / 0.35);
+    --shadow-gold-lg: 0 16px 48px -12px hsl(43 74% 49% / 0.4);
+    --shadow-card: 0 4px 16px hsl(0 0% 0% / 0.06);
+    --shadow-card-hover: 0 12px 32px hsl(0 0% 0% / 0.12);
+    --shadow-soft: 0 2px 8px hsl(0 0% 0% / 0.04);
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dark {
+    --background: 0 0% 6%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 43 80% 55%;
+    --primary-foreground: 0 0% 5%;
+    --primary-glow: 43 95% 65%;
+
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 58%;
+
+    --accent: 43 80% 55%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 43 80% 55%;
+
+    --gradient-gold: linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(43 95% 65%) 50%, hsl(43 80% 55%) 100%);
+    --gradient-gold-subtle: linear-gradient(135deg, hsl(43 80% 55% / 0.15) 0%, hsl(43 95% 65% / 0.25) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 6%) 0%, hsl(43 20% 10%) 50%, hsl(0 0% 6%) 100%);
+
+    --shadow-gold: 0 8px 32px -8px hsl(43 80% 55% / 0.45);
+    --shadow-gold-lg: 0 16px 48px -12px hsl(43 80% 55% / 0.5);
+    --shadow-card: 0 4px 16px hsl(0 0% 0% / 0.4);
+    --shadow-card-hover: 0 12px 32px hsl(0 0% 0% / 0.5);
+    --shadow-soft: 0 2px 8px hsl(0 0% 0% / 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Poppins', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  [dir="rtl"] body {
+    font-family: 'Tajawal', sans-serif;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better focus outlines */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+@layer utilities {
+  /* Hover effects */
+  .hover-scale {
+    @apply transition-transform duration-300 ease-out hover:scale-105;
+  }
+
+  .hover-scale-sm {
+    @apply transition-transform duration-200 ease-out hover:scale-[1.02];
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .hover-lift-lg {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .hover-lift-lg:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+
+  .hover-glow:hover {
+    box-shadow: var(--shadow-gold);
+  }
+
+  /* Gradient utilities */
+  .gold-gradient {
+    background: var(--gradient-gold);
+  }
+
+  .gold-gradient-subtle {
+    background: var(--gradient-gold-subtle);
+  }
+
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-gold);
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background/80 backdrop-blur-lg border border-border/50;
+  }
+
+  .glass-card {
+    @apply bg-card/90 backdrop-blur-md border border-border/30 shadow-soft;
+  }
+
+  /* Premium card styles */
+  .premium-card {
+    @apply bg-card rounded-xl border border-border shadow-card transition-all duration-300;
+  }
+
+  .premium-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Section styling */
+  .section-padding {
+    @apply py-12 md:py-16 lg:py-20;
+  }
+
+  .section-title {
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold;
+  }
+
+  .section-subtitle {
+    @apply text-muted-foreground text-base md:text-lg mt-2;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Custom scrollbar */
+  .scrollbar-custom {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.5);
+    border-radius: 3px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary));
+  }
+
+  /* RTL support utilities */
+  [dir="rtl"] .rtl\:left-auto {
+    left: auto;
+  }
+
+  [dir="rtl"] .rtl\:right-3 {
+    right: 0.75rem;
+  }
+
+  [dir="rtl"] .rtl\:pl-4 {
+    padding-left: 1rem;
+  }
+
+  [dir="rtl"] .rtl\:pr-10 {
+    padding-right: 2.5rem;
+  }
+
+  /* Animation delays */
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .animate-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+
+  /* Stagger animations for children */
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 100ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 400ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 500ms; }
+
+  /* Pulse animation for badges/alerts */
+  .pulse-gold {
+    animation: pulse-gold 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-gold {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(43 74% 49% / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 8px hsl(43 74% 49% / 0);
+    }
+  }
+
+  /* Shimmer effect for loading states */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Gold border accent */
+  .border-gold-gradient {
+    border-image: var(--gradient-gold) 1;
+  }
+
+  /* Status colors */
+  .status-success { @apply bg-success/10 text-success border-success/30; }
+  .status-warning { @apply bg-warning/10 text-warning border-warning/30; }
+  .status-error { @apply bg-destructive/10 text-destructive border-destructive/30; }
+  .status-info { @apply bg-primary/10 text-primary border-primary/30; }
+}
+
+/* Animation keyframes for page transitions */
+@layer utilities {
+  .page-enter {
+    animation: pageEnter 0.4s ease-out forwards;
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

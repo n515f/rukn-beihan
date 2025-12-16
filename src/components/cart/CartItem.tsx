@@ -1,0 +1,70 @@
+import { Minus, Plus, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useCart } from '@/context/CartContext';
+
+interface CartItemProps {
+  id: string;
+  name: string;
+  brand: string;
+  price: number;
+  image: string;
+  quantity: number;
+}
+
+const CartItem = ({ id, name, brand, price, image, quantity }: CartItemProps) => {
+  const { updateQuantity, removeItem } = useCart();
+
+  return (
+    <div className="flex gap-4 border-b py-4 last:border-b-0">
+      <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+        <img src={image} alt={name} className="h-full w-full object-cover" />
+      </div>
+
+      <div className="flex flex-1 flex-col justify-between">
+        <div className="flex justify-between">
+          <div>
+            <h3 className="font-semibold">{name}</h3>
+            <p className="text-sm text-muted-foreground">{brand}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => removeItem(id)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => updateQuantity(id, quantity - 1)}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <span className="w-8 text-center">{quantity}</span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => updateQuantity(id, quantity + 1)}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+
+          <div className="text-right">
+            <div className="font-bold text-primary">${(price * quantity).toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground">${price} each</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CartItem;

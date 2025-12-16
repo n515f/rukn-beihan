@@ -1,0 +1,42 @@
+[
+  {
+    "id": "1",
+    "type": "order",
+    "title": "Order Shipped",
+    "titleAr": "تم شحن الطلب",
+    "message": "Your order #ORD-2024-002 has been shipped and is on its way",
+    "messageAr": "تم شحن طلبك #ORD-2024-002 وهو في الطريق",
+    "timestamp": "2024-03-21T10:00:00Z",
+    "read": false
+  },
+  {
+    "id": "2",
+    "type": "promotion",
+    "title": "Special Offer: 20% Off",
+    "titleAr": "عرض خاص: خصم 20%",
+    "message": "Limited time offer on all AGM batteries. Shop now!",
+    "messageAr": "عرض محدود على جميع بطاريات AGM. تسوق الآن!",
+    "timestamp": "2024-03-20T15:30:00Z",
+    "read": false
+  },
+  {
+    "id": "3",
+    "type": "order",
+    "title": "Order Delivered",
+    "titleAr": "تم توصيل الطلب",
+    "message": "Your order #ORD-2024-001 has been delivered successfully",
+    "messageAr": "تم توصيل طلبك #ORD-2024-001 بنجاح",
+    "timestamp": "2024-03-18T14:00:00Z",
+    "read": true
+  },
+  {
+    "id": "4",
+    "type": "info",
+    "title": "New Products Available",
+    "titleAr": "منتجات جديدة متاحة",
+    "message": "Check out our latest collection of hybrid batteries",
+    "messageAr": "تحقق من أحدث مجموعة من البطاريات الهجينة",
+    "timestamp": "2024-03-15T09:00:00Z",
+    "read": true
+  }
+]

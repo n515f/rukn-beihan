@@ -1,39 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import AdminLayout from '@/components/admin/AdminLayout';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLang } from '@/context/LangContext';
-import { toast } from 'sonner';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import AdminLayout from "@/components/admin/AdminLayout";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 import {
-  getProductById,
   adminCreateProduct,
   adminUpdateProduct,
-  Product,
-} from '@/services/productsService';
-
-import { getCategories, Category } from '@/services/categoriesService';
-
-const brands = [
-  'BOSCH',
-  'Electron',
-  'Royal',
-  'Toro',
-  'AC Delco',
-  'Panasonic',
-  'Red Power',
-  'Amaron',
-  'VARTA Germany',
-  'VARTA Spain',
-];
+  getAdminProductById,
+} from "@/services/productsService";
+import { Category, getCategories } from "@/services/categoriesService";
+import { Brand, getBrands } from "@/services/brandsService";
+import { useLang } from "@/context/LangContext";
 
 type FormState = {
   nameEn: string;
@@ -44,345 +35,349 @@ type FormState = {
   stock: string;
   descriptionEn: string;
   descriptionAr: string;
-  image: string;
-  bestSeller: boolean; // مؤقت (ليست في DB الآن)
-  isNew: boolean; // مؤقت (ليست في DB الآن)
   isActive: boolean;
+
+  // image
+  imageUrl: string; // للعرض
+  imageFile: File | null; // للرفع
 };
 
 const AdminProductEditPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
   const { t, lang } = useLang();
+  const navigate = useNavigate();
+  const { id } = useParams();
 
-  const isEditMode = Boolean(id && id !== 'new');
+  const isEditMode = useMemo(() => !!id && id !== "new", [id]);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [brands, setBrands] = useState<Brand[]>([]);
 
-  const [formData, setFormData] = useState<FormState>({
-    nameEn: '',
-    nameAr: '',
-    brand: '',
+  const [form, setForm] = useState<FormState>({
+    nameEn: "",
+    nameAr: "",
+    brand: "",
     categoryId: null,
-    price: '',
-    stock: '',
-    descriptionEn: '',
-    descriptionAr: '',
-    image: '/placeholder.svg',
-    bestSeller: false,
-    isNew: false,
+    price: "",
+    stock: "0",
+    descriptionEn: "",
+    descriptionAr: "",
     isActive: true,
+    imageUrl: "/placeholder-battery.jpg",
+    imageFile: null,
   });
 
-  const categoryLabel = useMemo(() => {
-    return (c: Category) => (lang === 'ar' ? c.nameAr : c.name);
-  }, [lang]);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchData = async () => {
+    const run = async () => {
       setLoading(true);
       try {
-        const cats = await getCategories(false); // جلب الكل (active وغير active) للأدمن
+        const cats = await getCategories(false);
+        const brs = await getBrands(false);
         if (!mounted) return;
         setCategories(cats);
+        setBrands(brs);
 
         if (isEditMode && id) {
-          const product = await getProductById(id);
+          const p = await getAdminProductById(id);
           if (!mounted) return;
 
-          if (product) {
-            // ملاحظة: عندك في Product داخل productsService لازم يكون فيه categoryId number
-            setFormData({
-              nameEn: product.name ?? '',
-              nameAr: product.nameAr ?? product.name ?? '',
-              brand: product.brand ?? '',
-              categoryId: product.categoryId ?? null,
-              price: String(product.price ?? ''),
-              stock: String(product.stock ?? ''),
-              descriptionEn: product.description ?? '',
-              descriptionAr: product.descriptionAr ?? product.description ?? '',
-              image: product.image ?? '/placeholder.svg',
-              bestSeller: Boolean(product.bestSeller),
-              isNew: Boolean(product.isNew),
-              isActive: Boolean(product.active ?? true),
+          if (p) {
+            setForm({
+              nameEn: p.name ?? "",
+              nameAr: p.nameAr ?? p.name ?? "",
+              brand: p.brand ?? "",
+              categoryId: Number(p.categoryId) || null,
+              price: String(p.price ?? ""),
+              stock: String(p.stock ?? "0"),
+              descriptionEn: p.description ?? "",
+              descriptionAr: p.descriptionAr ?? "",
+              isActive: Boolean(p.active ?? true),
+              imageUrl: p.image ?? "/placeholder-battery.jpg",
+              imageFile: null,
             });
+            setImagePreview(p.image ?? "");
           }
         }
-      } catch (error) {
-        console.error(error);
-        toast.error(t('common.error'));
+      } catch (e) {
+        console.error(e);
+        toast.error(t("common.error"));
       } finally {
         if (mounted) setLoading(false);
       }
     };
 
-    fetchData();
-
+    run();
     return () => {
       mounted = false;
     };
   }, [id, isEditMode, t]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onPickImage = (file: File | null) => {
+    setForm((prev) => ({ ...prev, imageFile: file }));
+    if (!file) return;
 
-    if (!formData.brand) {
-      toast.error(t('admin.selectBrand'));
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.nameEn.trim() || !form.nameAr.trim() || !form.brand.trim()) {
+      toast.error(t("common.error"));
       return;
     }
-    if (!formData.categoryId) {
-      toast.error(t('admin.selectCategory'));
+    if (!form.categoryId) {
+      toast.error(lang === "ar" ? "اختر التصنيف" : "Select category");
       return;
     }
 
-    const priceNum = Number(formData.price);
-    const stockNum = Number(formData.stock);
-
+    const priceNum = Number(form.price);
+    const stockNum = Number(form.stock);
     if (!Number.isFinite(priceNum)) {
-      toast.error(t('admin.invalidPrice'));
+      toast.error(lang === "ar" ? "السعر غير صحيح" : "Invalid price");
       return;
     }
     if (!Number.isFinite(stockNum)) {
-      toast.error(t('admin.invalidStock'));
+      toast.error(lang === "ar" ? "المخزون غير صحيح" : "Invalid stock");
       return;
     }
 
+    if (!isEditMode && !form.imageFile) {
+      toast.error(lang === "ar" ? "الصورة مطلوبة عند الإضافة" : "Image is required for new product");
+      return;
+    }
+
+    setSaving(true);
     try {
       if (isEditMode && id) {
         await adminUpdateProduct({
-          id: Number(id),
-          name_en: formData.nameEn,
-          name_ar: formData.nameAr,
-          description_en: formData.descriptionEn,
-          description_ar: formData.descriptionAr,
-          brand: formData.brand,
-          category_id: formData.categoryId,
+          id,
+          name_en: form.nameEn,
+          name_ar: form.nameAr,
+          description_en: form.descriptionEn,
+          description_ar: form.descriptionAr,
+          brand: form.brand,
+          category_id: form.categoryId,
           price: priceNum,
           stock: stockNum,
-          image_url: formData.image,
-          active: formData.isActive,
+          active: form.isActive,
+          imageFile: form.imageFile, // optional
         });
-
-        toast.success(t('admin.productUpdated'));
+        toast.success(lang === "ar" ? "تم تحديث المنتج" : "Product updated");
       } else {
-        await adminCreateProduct({
-          name_en: formData.nameEn,
-          name_ar: formData.nameAr,
-          description_en: formData.descriptionEn,
-          description_ar: formData.descriptionAr,
-          brand: formData.brand,
-          category_id: formData.categoryId,
+        const res = await adminCreateProduct({
+          name_en: form.nameEn,
+          name_ar: form.nameAr,
+          description_en: form.descriptionEn,
+          description_ar: form.descriptionAr,
+          brand: form.brand,
+          category_id: form.categoryId,
           price: priceNum,
           stock: stockNum,
-          image_url: formData.image,
-          active: formData.isActive,
+          active: form.isActive,
+          imageFile: form.imageFile!, // required
         });
 
-        toast.success(t('admin.productAdded'));
+        toast.success(lang === "ar" ? "تمت إضافة المنتج" : "Product created");
+        navigate(`/admin/products/${res.productId}`);
       }
-
-      navigate('/admin/products');
-    } catch (error) {
-      console.error(error);
-      toast.error(t('common.error'));
+    } catch (e) {
+      console.error(e);
+      toast.error(lang === "ar" ? "فشل الحفظ" : "Save failed");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <p>{t('common.loading')}</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const categoryLabel = (c: Category) => (lang === "ar" ? c.nameAr : c.name);
+  const brandLabel = (b: Brand) => (lang === "ar" ? b.nameAr : b.name);
 
   return (
     <AdminLayout>
       <AdminPageHeader
-        title={isEditMode ? t('admin.editProduct') : t('admin.addProduct')}
+        title={isEditMode ? t("admin.editProduct") : t("admin.addProduct")}
         breadcrumbs={[
-          { label: t('admin.products'), href: '/admin/products' },
-          { label: isEditMode ? t('admin.editProduct') : t('admin.addProduct') },
+          { label: t("admin.products"), href: "/admin/products" },
+          { label: isEditMode ? t("common.edit") : t("common.add") },
         ]}
-        actions={
-          <Button variant="outline" onClick={() => navigate('/admin/products')}>
-            <ArrowLeft className="h-4 w-4 me-2" />
-            {t('admin.backToProducts')}
-          </Button>
-        }
       />
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.basicInfo')}</CardTitle>
-              </CardHeader>
+      {loading ? (
+        <div className="p-6 text-center">{t("common.loading")}</div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>{isEditMode ? t("admin.editProduct") : t("admin.addProduct")}</CardTitle>
+          </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nameEn">{t('admin.productNameEn')}</Label>
-                    <Input
-                      id="nameEn"
-                      value={formData.nameEn}
-                      onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                      required
-                    />
-                  </div>
+          <CardContent className="space-y-6">
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="product-image">{lang === "ar" ? "صورة المنتج" : "Product Image"}</Label>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="nameAr">{t('admin.productNameAr')}</Label>
-                    <Input
-                      id="nameAr"
-                      value={formData.nameAr}
-                      onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                      dir="rtl"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="brand">{t('admin.brand')}</Label>
-                    <Select
-                      value={formData.brand}
-                      onValueChange={(value) => setFormData({ ...formData, brand: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('admin.selectBrand')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {brands.map((b) => (
-                          <SelectItem key={b} value={b}>
-                            {b}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="category">{t('products.category')}</Label>
-                    <Select
-                      value={formData.categoryId ? String(formData.categoryId) : ''}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, categoryId: Number(value) })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t('admin.selectCategory')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={String(cat.id)}>
-                            {categoryLabel(cat)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">{t('products.price')}</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="stock">{t('products.stock')}</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      value={formData.stock}
-                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
+              <div className="flex items-center gap-4">
+                <img
+                  src={imagePreview || form.imageUrl}
+                  alt={form.nameEn || "product"}
+                  className="h-20 w-20 rounded object-cover border"
+                />
 
                 <div className="space-y-2">
-                  <Label htmlFor="descriptionEn">{t('admin.descriptionEn')}</Label>
-                  <Textarea
-                    id="descriptionEn"
-                    value={formData.descriptionEn}
-                    onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
-                    rows={3}
+                  <Input
+                    id="product-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => onPickImage(e.target.files?.[0] ?? null)}
                   />
+                  <div className="text-xs text-muted-foreground">
+                    {lang === "ar"
+                      ? "الصيغ المدعومة: jpg, png, webp, gif (حد أقصى 5MB)"
+                      : "Allowed: jpg, png, webp, gif (max 5MB)"}
+                  </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="descriptionAr">{t('admin.descriptionAr')}</Label>
-                  <Textarea
-                    id="descriptionAr"
-                    value={formData.descriptionAr}
-                    onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
-                    rows={3}
-                    dir="rtl"
-                  />
+            {/* Names */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name-en">{lang === "ar" ? "الاسم (EN)" : "Name (EN)"}</Label>
+                <Input
+                  id="name-en"
+                  value={form.nameEn}
+                  onChange={(e) => setForm((p) => ({ ...p, nameEn: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name-ar">{lang === "ar" ? "الاسم (AR)" : "Name (AR)"}</Label>
+                <Input
+                  id="name-ar"
+                  value={form.nameAr}
+                  onChange={(e) => setForm((p) => ({ ...p, nameAr: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Brand + Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="brand">{t("admin.brand")}</Label>
+                <Select
+                  value={form.brand}
+                  onValueChange={(v) => setForm((p) => ({ ...p, brand: v }))}
+                >
+                  <SelectTrigger id="brand" aria-label={t("admin.selectBrand")}>
+                    <SelectValue placeholder={t("admin.selectBrand")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((b) => (
+                      <SelectItem key={b.id} value={b.name}>
+                        {brandLabel(b)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category-trigger">{t("products.category")}</Label>
+                <Select
+                  value={form.categoryId ? String(form.categoryId) : ""}
+                  onValueChange={(v) => setForm((p) => ({ ...p, categoryId: Number(v) }))}
+                >
+                  <SelectTrigger
+                    id="category-trigger"
+                    aria-label={lang === "ar" ? "اختر التصنيف" : "Select category"}
+                  >
+                    <SelectValue placeholder={lang === "ar" ? "اختر التصنيف" : "Select category"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={String(c.idNumber)}>
+                        {categoryLabel(c)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Price + Stock */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">{t("admin.price")}</Label>
+                <Input
+                  id="price"
+                  inputMode="decimal"
+                  value={form.price}
+                  onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stock">{t("admin.stock")}</Label>
+                <Input
+                  id="stock"
+                  inputMode="numeric"
+                  value={form.stock}
+                  onChange={(e) => setForm((p) => ({ ...p, stock: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Descriptions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="desc-en">{lang === "ar" ? "الوصف (EN)" : "Description (EN)"}</Label>
+                <Textarea
+                  id="desc-en"
+                  value={form.descriptionEn}
+                  onChange={(e) => setForm((p) => ({ ...p, descriptionEn: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="desc-ar">{lang === "ar" ? "الوصف (AR)" : "Description (AR)"}</Label>
+                <Textarea
+                  id="desc-ar"
+                  value={form.descriptionAr}
+                  onChange={(e) => setForm((p) => ({ ...p, descriptionAr: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Active */}
+            <div className="flex items-center justify-between border rounded-lg p-4">
+              <div>
+                <div className="font-medium">{t("admin.status")}</div>
+                <div className="text-sm text-muted-foreground">
+                  {form.isActive ? t("admin.active") : t("admin.inactive")}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(v) => setForm((p) => ({ ...p, isActive: v }))}
+                aria-label={t("admin.status")}
+              />
+            </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.settings')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="active">{t('admin.active')}</Label>
-                  <Switch
-                    id="active"
-                    checked={formData.isActive}
-                    onCheckedChange={(v) => setFormData({ ...formData, isActive: v })}
-                  />
-                </div>
-
-                {/* هذه حقول UI مؤقتة (ليست في DB حالياً) */}
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="bestSeller">{t('productDetail.bestSeller')}</Label>
-                  <Switch
-                    id="bestSeller"
-                    checked={formData.bestSeller}
-                    onCheckedChange={(v) => setFormData({ ...formData, bestSeller: v })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="isNew">{t('productDetail.new')}</Label>
-                  <Switch
-                    id="isNew"
-                    checked={formData.isNew}
-                    onCheckedChange={(v) => setFormData({ ...formData, isNew: v })}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Button type="submit" className="w-full">
-              {t('admin.save')}
-            </Button>
-          </div>
-        </div>
-      </form>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => navigate("/admin/products")}>
+                {t("common.cancel")}
+              </Button>
+              <Button onClick={handleSubmit} disabled={saving}>
+                {saving ? t("common.loading") : t("common.save")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </AdminLayout>
   );
 };

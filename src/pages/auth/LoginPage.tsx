@@ -144,11 +144,7 @@ const LoginPage = () => {
           </div>
         </div>
 
-        <div className="mt-8 p-4 bg-muted/50 rounded-lg text-sm">
-          <p className="font-medium mb-2">{t('auth.demoAccount')}:</p>
-          <p className="text-muted-foreground">{t('auth.email')}: admin@powercell.com</p>
-          <p className="text-muted-foreground">{t('auth.password')}: admin123</p>
-        </div>
+       
       </Card>
     </div>
   );

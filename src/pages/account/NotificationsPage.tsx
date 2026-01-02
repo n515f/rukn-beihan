@@ -1,81 +1,90 @@
 import { useEffect, useState } from 'react';
-import { Bell } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getNotifications, Notification } from '@/services/notificationsService';
 import { useLang } from '@/context/LangContext';
+import { useAuth } from '@/context/AuthContext';
+import { getNotifications, markAsRead, Notification } from '@/services/notificationsService';
+import { toast } from 'sonner';
+import NotificationList from '@/components/notifications/NotificationList';
+import { CheckCheck } from 'lucide-react';
 
 const NotificationsPage = () => {
-  const { t, lang } = useLang();
+  const { t } = useLang();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const fetchNotifications = async () => {
+    if (!user?.id) {
+      setNotifications([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const list = await getNotifications(String(user.id));
+      setNotifications(list);
+    } catch (err) {
+      toast.error(t('notifications.loadError'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const data = await getNotifications();
-        setNotifications(data);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchNotifications();
-  }, []);
+  }, [user?.id, t]);
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        {t('common.loading')}
-      </div>
-    );
-  }
+  useEffect(() => {
+    const onUpdated = () => {
+      fetchNotifications();
+    };
+    window.addEventListener('notifications-updated', onUpdated);
+    return () => window.removeEventListener('notifications-updated', onUpdated);
+  }, [user?.id]);
+
+  const handleMarkAll = async () => {
+    const unread = notifications.filter((n) => !n.read);
+    if (unread.length === 0) return;
+    try {
+      await Promise.all(unread.map((n) => markAsRead(n.id)));
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      toast.success(t('notifications.allMarkedRead'));
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    } catch (err) {
+      toast.error(t('notifications.markAllError'));
+    }
+  };
+
+  const handleMarkOne = async (id: string) => {
+    try {
+      await markAsRead(id);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
+    } catch (err) {
+      toast.error(t('notifications.markError'));
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">{t('notifications.title')}</h1>
-        <Button variant="outline">Mark all as read</Button>
+    <div className="container max-w-3xl mx-auto py-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold">{t('notifications.title')}</h1>
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label={t('notifications.markAllAsRead')}
+          disabled={notifications.every((n) => n.read)}
+          onClick={handleMarkAll}
+        >
+          <CheckCheck className="h-5 w-5" />
+        </Button>
       </div>
-
-      {notifications.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Bell className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-xl font-semibold mb-2">{t('notifications.noNotifications')}</h3>
-          <p className="text-muted-foreground">
-            You're all caught up!
-          </p>
-        </Card>
+      {loading ? (
+        <div className="text-center text-muted-foreground">{t('common.loading')}</div>
+      ) : notifications.length === 0 ? (
+        <div className="text-center text-muted-foreground">{t('notifications.noNotifications')}</div>
       ) : (
-        <div className="space-y-3">
-          {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={`p-6 ${!notification.read ? 'border-l-4 border-l-primary bg-muted/30' : ''}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1">
-                    {lang === 'ar' ? notification.titleAr : notification.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {lang === 'ar' ? notification.messageAr : notification.message}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(notification.timestamp).toLocaleString()}
-                  </p>
-                </div>
-                {!notification.read && (
-                  <Button variant="ghost" size="sm">
-                    {t('notifications.markAsRead')}
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
+        <NotificationList notifications={notifications} onMarkAsRead={handleMarkOne} />
       )}
     </div>
   );

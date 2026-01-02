@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 interface ProductGalleryProps {
   images: string[];
   productName: string;
+  // اختياري: لعرض وسم نفاد المخزون
+  stock?: number;
+  active?: boolean;
 }
 
-const ProductGallery = ({ images, productName }: ProductGalleryProps) => {
+const ProductGallery = ({ images, productName, stock, active }: ProductGalleryProps) => {
   const safeImages = useMemo(() => {
     const list = (images ?? []).filter(Boolean);
     return list.length > 0 ? list : ['/placeholder-battery.jpg'];
@@ -28,6 +31,8 @@ const ProductGallery = ({ images, productName }: ProductGalleryProps) => {
     setCurrentIndex((prev) => (prev - 1 + safeImages.length) % safeImages.length);
   };
 
+  const outOfStock = (active === false) || (typeof stock === 'number' && stock <= 0);
+
   return (
     <div className="space-y-4">
       {/* Main Image */}
@@ -40,6 +45,12 @@ const ProductGallery = ({ images, productName }: ProductGalleryProps) => {
           }}
           className="h-full w-full object-cover"
         />
+
+        {outOfStock && (
+          <div className="absolute top-2 left-2 px-2 py-1 rounded bg-destructive text-destructive-foreground text-xs">
+            غير متوفر
+          </div>
+        )}
 
         {safeImages.length > 1 && (
           <>

@@ -31,6 +31,10 @@ interface ProductCardProps {
   // optional (لو تحب تعرض التصنيف على البطاقة لاحقاً)
   categoryName?: string;
   categoryNameAr?: string;
+  // أضف دعم تمرير نمط خارجي
+  className?: string;
+  // جديد: تعطيل إضافة للسلة إذا المنتج غير نشط
+  active?: boolean;
 }
 
 const ProductCard = ({
@@ -46,15 +50,29 @@ const ProductCard = ({
   stock,
   bestSeller,
   isNew,
+  className,
+  active = true,
 }: ProductCardProps) => {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const { t, lang } = useLang();
   const { formatPrice } = useCurrency();
 
   const displayName = lang === 'ar' ? (nameAr || name) : name;
 
+  const existingQty = items.find((i) => i.id === id)?.quantity ?? 0;
+  const outOfStock = !active || stock <= 0;
+  const canAdd = !outOfStock && existingQty < stock;
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!canAdd) {
+      toast.error(
+        lang === 'ar'
+          ? 'لا يمكن إضافة كمية تتجاوز المخزون المتاح أو المنتج غير متاح'
+          : 'Cannot add beyond available stock or product is inactive'
+      );
+      return;
+    }
     addItem({
       id,
       name: displayName, // مهم: عشان سلة التسوق تستخدم نفس اللغة
@@ -71,7 +89,7 @@ const ProductCard = ({
       : 0;
 
   return (
-    <Card className="group overflow-hidden hover-lift">
+    <Card className={`group overflow-hidden hover-lift ${className ?? ''}`}>
       <Link to={`/product/${id}`}>
         <div className="relative aspect-square overflow-hidden bg-muted">
           <img
@@ -127,7 +145,7 @@ const ProductCard = ({
           </div>
 
           <div className="mt-2 text-xs">
-            {stock > 0 ? (
+            {!outOfStock ? (
               <span className="text-green-600">{t('products.inStock')}</span>
             ) : (
               <span className="text-destructive">{t('products.outOfStock')}</span>
@@ -137,7 +155,7 @@ const ProductCard = ({
       </Link>
 
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full" onClick={handleAddToCart} disabled={stock === 0}>
+        <Button className="w-full" onClick={handleAddToCart} disabled={!canAdd}>
           <ShoppingCart className="mr-2 h-4 w-4" />
           {t('products.addToCart')}
         </Button>

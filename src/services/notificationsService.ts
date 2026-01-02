@@ -85,3 +85,45 @@ export const getUnreadCount = async (userId?: string): Promise<number> => {
   const notifications = await getNotifications(userId);
   return notifications.filter((n) => !n.read).length;
 };
+
+export const createNotification = async (payload: {
+  userId?: string | number | null;
+  titleEn: string;
+  titleAr: string;
+  messageEn: string;
+  messageAr: string;
+  type?: "order" | "promotion" | "info";
+}): Promise<boolean> => {
+  await apiRequest<ApiOkResponse>("/notifications/create.php", {
+    method: "POST",
+    body: JSON.stringify({
+      user_id: payload.userId != null ? Number(payload.userId) : null,
+      title_en: payload.titleEn,
+      title_ar: payload.titleAr,
+      message_en: payload.messageEn,
+      message_ar: payload.messageAr,
+      type: payload.type ?? "info",
+    }),
+  });
+  return true;
+};
+
+export const createBulkNotification = async (payload: {
+  titleEn: string;
+  titleAr: string;
+  messageEn: string;
+  messageAr: string;
+  type?: "order" | "promotion" | "info";
+}): Promise<boolean> => {
+  await apiRequest<ApiOkResponse>("/notifications/bulk-create.php", {
+    method: "POST",
+    body: JSON.stringify({
+      title_en: payload.titleEn,
+      title_ar: payload.titleAr,
+      message_en: payload.messageEn,
+      message_ar: payload.messageAr,
+      type: payload.type ?? "info",
+    }),
+  });
+  return true;
+};

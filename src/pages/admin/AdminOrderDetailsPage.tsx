@@ -1,6 +1,7 @@
+// src/pages/admin/AdminOrderDetailsPage.tsx
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Mail, ExternalLink, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, ExternalLink, Package } from 'lucide-react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { getOrderById, Order, updateOrderStatus } from '@/services/ordersService
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-const statusSteps = ['pending', 'confirmed', 'shipped', 'delivered'];
+const statusSteps = ['pending', 'confirmed', 'shipped', 'delivered'] as const;
 
 const AdminOrderDetailsPage = () => {
   const { id } = useParams();
@@ -28,43 +29,58 @@ const AdminOrderDetailsPage = () => {
   const { t } = useLang();
   const { formatPrice } = useCurrency();
   const { isVatEnabled, vatPercentage, calculateTax } = useTax();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrder = async () => {
-      if (id) {
-        const data = await getOrderById(id);
-        setOrder(data);
+      try {
+        if (id) {
+          const data = await getOrderById(id);
+          setOrder(data);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchOrder();
   }, [id]);
 
   const handleStatusChange = async (newStatus: Order['status']) => {
-    if (order) {
-      // TODO: Replace with actual API call to backend
+    if (!order) return;
+    try {
       await updateOrderStatus(order.id, newStatus);
       setOrder({ ...order, status: newStatus });
       toast.success(t('admin.statusUpdated'));
+      // Notify other admin pages to refresh stock
+      window.dispatchEvent(new CustomEvent('stock-updated'));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t('admin.updateFailed');
+      // Show server message for validation/business errors (e.g., 422)
+      toast.error(msg || t('admin.updateFailed'));
     }
   };
 
   const getStatusBadgeVariant = (status: Order['status']) => {
     switch (status) {
-      case 'delivered': return 'default';
-      case 'shipped': return 'secondary';
-      case 'confirmed': return 'outline';
-      case 'cancelled': return 'destructive';
-      default: return 'outline';
+      case 'delivered':
+        return 'default';
+      case 'shipped':
+        return 'secondary';
+      case 'confirmed':
+        return 'outline';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'outline';
     }
   };
 
   const getCurrentStepIndex = () => {
     if (!order) return 0;
     if (order.status === 'cancelled') return -1;
-    return statusSteps.indexOf(order.status);
+    return statusSteps.indexOf(order.status as (typeof statusSteps)[number]);
   };
 
   if (loading) {
@@ -136,14 +152,15 @@ const AdminOrderDetailsPage = () => {
                 </Select>
               </div>
             </CardHeader>
+
             <CardContent>
               {order.status !== 'cancelled' ? (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between relative">
                   {statusSteps.map((step, index) => (
-                    <div key={step} className="flex flex-col items-center flex-1">
+                    <div key={step} className="flex flex-col items-center flex-1 relative">
                       <div
                         className={cn(
-                          'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
+                          'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors z-10',
                           index <= currentStep
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground'
@@ -151,14 +168,18 @@ const AdminOrderDetailsPage = () => {
                       >
                         {index + 1}
                       </div>
-                      <span className="text-xs mt-2 text-center">{t(`account.${step}`)}</span>
+
+                      <span className="text-xs mt-2 text-center">
+                        {t(`account.${step}`)}
+                      </span>
+
+                      {/* Connector line (بدون inline style) */}
                       {index < statusSteps.length - 1 && (
                         <div
                           className={cn(
-                            'absolute h-0.5 w-full',
+                            'absolute top-4 left-1/2 h-0.5 w-[calc(100%-32px)] ml-4',
                             index < currentStep ? 'bg-primary' : 'bg-muted'
                           )}
-                          style={{ left: '50%', top: '16px', width: 'calc(100% - 32px)', marginLeft: '16px' }}
                         />
                       )}
                     </div>
@@ -215,7 +236,9 @@ const AdminOrderDetailsPage = () => {
               </div>
               {isVatEnabled && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t('tax.vat')} ({vatPercentage}%)</span>
+                  <span className="text-muted-foreground">
+                    {t('tax.vat')} ({vatPercentage}%)
+                  </span>
                   <span>{formatPrice(tax)}</span>
                 </div>
               )}
@@ -257,9 +280,9 @@ const AdminOrderDetailsPage = () => {
                   </p>
                 </div>
               </div>
-              {order.location?.mapLink && (
+              {order.deliveryAddress.locationUrl && (
                 <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                  <a href={order.location.mapLink} target="_blank" rel="noopener noreferrer">
+                  <a href={order.deliveryAddress.locationUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 me-2" />
                     {t('location.useMap')}
                   </a>
@@ -284,7 +307,7 @@ const AdminOrderDetailsPage = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('checkout.paymentMethod')}</span>
-                <span>{t(`checkout.${order.paymentMethod}`)}</span>
+                <span>{t(order.paymentMethod === 'cod' ? 'checkout.cashOnDelivery' : 'checkout.onlinePayment')}</span>
               </div>
             </CardContent>
           </Card>

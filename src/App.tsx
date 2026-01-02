@@ -23,6 +23,7 @@ import OrdersPage from "./pages/account/OrdersPage";
 import NotificationsPage from "./pages/account/NotificationsPage";
 import ProfilePage from "./pages/account/ProfilePage";
 import AddressesPage from "./pages/account/AddressesPage";
+import SettingsPage from "./pages/account/SettingsPage";
 import AccountReviewsPage from "./pages/account/AccountReviewsPage";
 import OrderTrackingPage from "./pages/account/OrderTrackingPage";
 import OffersPage from "./pages/OffersPage";
@@ -37,6 +38,11 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminAdsPage from "./pages/admin/AdminAdsPage";
+import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
+import AdmincategoriesPage from "./pages/admin/AdmincategoriesPage";
+import AdminbrandsPage from "./pages/admin/AdminbrandsPage";
+import AdminMessagePage from "./pages/admin/AdminMessagePage";
+import AdminSupportInboxPage from "./pages/admin/AdminSupportInboxPage";
 import OrderDetailsPage from "./pages/account/OrderDetailsPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import NotFound from "./pages/NotFound";
@@ -74,6 +80,7 @@ const App = () => (
                       <Route path="/account/notifications" element={<><Header /><main className="flex-1 min-h-screen"><NotificationsPage /></main><Footer /><SmartAssistant /></>} />
                       <Route path="/account/profile" element={<><Header /><main className="flex-1 min-h-screen"><ProfilePage /></main><Footer /><SmartAssistant /></>} />
                       <Route path="/account/addresses" element={<><Header /><main className="flex-1 min-h-screen"><AddressesPage /></main><Footer /><SmartAssistant /></>} />
+                      <Route path="/account/settings" element={<><Header /><main className="flex-1 min-h-screen"><SettingsPage /></main><Footer /><SmartAssistant /></>} />
                       <Route path="/account/reviews" element={<><Header /><main className="flex-1 min-h-screen"><AccountReviewsPage /></main><Footer /><SmartAssistant /></>} />
                       <Route path="/account/tracking/:id" element={<><Header /><main className="flex-1 min-h-screen"><OrderTrackingPage /></main><Footer /><SmartAssistant /></>} />
                       
@@ -86,9 +93,14 @@ const App = () => (
                       <Route path="/admin/orders/:id" element={<AdminOrderDetailsPage />} />
                       <Route path="/admin/banners" element={<AdminBannersPage />} />
                       <Route path="/admin/ads" element={<AdminAdsPage />} />
+                      <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+                      <Route path="/admin/messages" element={<AdminMessagePage />} />
+                      <Route path="/admin/support-inbox" element={<AdminSupportInboxPage />} />
                       <Route path="/admin/users" element={<AdminUsersPage />} />
                       <Route path="/admin/reviews" element={<AdminReviewsPage />} />
                       <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                      <Route path="/admin/categories" element={<AdmincategoriesPage />} />
+                      <Route path="/admin/brands" element={<AdminbrandsPage />} />
                       
                       <Route path="*" element={<NotFound />} />
                     </Routes>

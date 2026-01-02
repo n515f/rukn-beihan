@@ -22,8 +22,8 @@ type ApiCreateResponse = {
 };
 
 export interface Category {
-  id: string;      // keep UI friendly
-  idNumber: number; // numeric id for filtering
+  id: string;       // UI-friendly
+  idNumber: number; // numeric id
   name: string;
   nameAr: string;
   slug: string;
@@ -52,7 +52,7 @@ export const getCategories = async (activeOnly = true): Promise<Category[]> => {
   return (data.categories ?? []).map(mapApiCategory);
 };
 
-// ADMIN CRUD (إذا رغبت لاحقاً)
+// ADMIN CRUD (اختياري)
 export const adminCreateCategory = async (payload: {
   name_en: string;
   name_ar: string;

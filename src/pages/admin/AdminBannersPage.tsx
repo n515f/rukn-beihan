@@ -1,20 +1,25 @@
-import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, ExternalLink } from 'lucide-react';
-import AdminLayout from '@/components/admin/AdminLayout';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+
+import AdminLayout from "@/components/admin/AdminLayout";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,284 +29,507 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { useLang } from '@/context/LangContext';
-import { getBanners, Banner, toggleBannerStatus } from '@/services/adsService';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
 
-// Local state for banner CRUD
-let localBanners: Banner[] = [];
+import { useLang } from "@/context/LangContext";
+import { toast } from "sonner";
 
-const AdminBannersPage = () => {
+import {
+  Banner,
+  getBanners,
+  adminCreateBanner,
+  adminUpdateBanner,
+  adminDeleteBanner,
+  toggleBannerStatus,
+} from "@/services/adsService";
+
+type FormState = {
+  id?: string;
+  title_en: string;
+  title_ar: string;
+  description_en: string;
+  description_ar: string;
+  link: string;
+  active: boolean;
+
+  // للعرض الحالي
+  currentImageUrl?: string;
+
+  // رفع صورة جديدة
+  imageFile?: File | null;
+};
+
+const emptyForm: FormState = {
+  title_en: "",
+  title_ar: "",
+  description_en: "",
+  description_ar: "",
+  link: "",
+  active: true,
+  currentImageUrl: "",
+  imageFile: null,
+};
+
+export default function AdminBannersPage() {
   const { t, lang } = useLang();
-  const [banners, setBanners] = useState<Banner[]>([]);
+
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
+
+  // Dialog (Add/Edit)
+  const [formOpen, setFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [form, setForm] = useState<FormState>({ ...emptyForm });
+
+  // Delete
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    titleAr: '',
-    description: '',
-    descriptionAr: '',
-    image: '/placeholder.svg',
-    link: '/catalog',
-    active: true,
-  });
+  const [deleting, setDeleting] = useState(false);
+
+  // Image preview (from File)
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const data = await getBanners();
+      setBanners(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      toast.error(t("common.error"));
+      setBanners([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBanners = async () => {
-      if (localBanners.length === 0) {
-        const data = await getBanners();
-        localBanners = [...data];
-      }
-      setBanners([...localBanners]);
-      setLoading(false);
-    };
-    fetchBanners();
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleToggleStatus = async (banner: Banner) => {
-    // TODO: Replace with actual API call to backend
-    await toggleBannerStatus(banner.id);
-    localBanners = localBanners.map(b =>
-      b.id === banner.id ? { ...b, active: !b.active } : b
-    );
-    setBanners([...localBanners]);
-    toast.success(t('admin.statusUpdated'));
+  // cleanup preview URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const openAdd = () => {
+    setIsEditMode(false);
+    setForm({ ...emptyForm });
+    setPreviewUrl("");
+    setFormOpen(true);
   };
 
-  const openAddDialog = () => {
-    setEditingBanner(null);
-    setFormData({
-      title: '',
-      titleAr: '',
-      description: '',
-      descriptionAr: '',
-      image: '/placeholder.svg',
-      link: '/catalog',
-      active: true,
+  const openEdit = (b: Banner) => {
+    setIsEditMode(true);
+    setForm({
+      id: b.id,
+      title_en: b.title ?? "",
+      title_ar: b.titleAr ?? "",
+      description_en: b.description ?? "",
+      description_ar: b.descriptionAr ?? "",
+      link: b.link ?? "",
+      active: !!b.active,
+      currentImageUrl: b.image ?? "",
+      imageFile: null,
     });
-    setDialogOpen(true);
+    setPreviewUrl("");
+    setFormOpen(true);
   };
 
-  const openEditDialog = (banner: Banner) => {
-    setEditingBanner(banner);
-    setFormData({
-      title: banner.title,
-      titleAr: banner.titleAr,
-      description: banner.description,
-      descriptionAr: banner.descriptionAr,
-      image: banner.image,
-      link: banner.link,
-      active: banner.active,
-    });
-    setDialogOpen(true);
+  const closeForm = () => {
+    setFormOpen(false);
+    setSaving(false);
+    setIsEditMode(false);
+    setForm({ ...emptyForm });
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl("");
   };
 
-  const handleSubmit = () => {
-    // TODO: Replace with actual API call to backend
-    if (editingBanner) {
-      localBanners = localBanners.map(b =>
-        b.id === editingBanner.id ? { ...b, ...formData } : b
+  const onPickFile = (file: File | null) => {
+    // revoke old
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    if (!file) {
+      setForm((p) => ({ ...p, imageFile: null }));
+      setPreviewUrl("");
+      return;
+    }
+
+    setForm((p) => ({ ...p, imageFile: file }));
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const canSubmit = useMemo(() => {
+    if (!form.title_en.trim()) return false;
+    if (!form.title_ar.trim()) return false;
+
+    // في الإضافة لازم صورة
+    if (!isEditMode && !form.imageFile) return false;
+
+    return true;
+  }, [form.title_en, form.title_ar, form.imageFile, isEditMode]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    setSaving(true);
+    try {
+      if (!isEditMode) {
+        // CREATE (image required)
+        await adminCreateBanner({
+          title_en: form.title_en.trim(),
+          title_ar: form.title_ar.trim(),
+          description_en: form.description_en ?? "",
+          description_ar: form.description_ar ?? "",
+          link: form.link ?? "",
+          active: form.active,
+          imageFile: form.imageFile!, // guaranteed by canSubmit
+        });
+
+        toast.success(t("admin.bannerAdded") ?? "Banner added");
+      } else {
+        // UPDATE (image optional)
+        if (!form.id) throw new Error("Missing banner id");
+
+        await adminUpdateBanner({
+          id: form.id,
+          title_en: form.title_en.trim(),
+          title_ar: form.title_ar.trim(),
+          description_en: form.description_en ?? "",
+          description_ar: form.description_ar ?? "",
+          link: form.link ?? "",
+          active: form.active,
+          imageFile: form.imageFile ?? null,
+        });
+
+        toast.success(t("admin.bannerUpdated") ?? "Banner updated");
+      }
+
+      await fetchAll();
+      closeForm();
+    } catch (e) {
+      console.error(e);
+      toast.error(t("admin.saveFailed") ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (b: Banner) => {
+    const next = !b.active;
+    try {
+      await toggleBannerStatus(b.id, next);
+
+      setBanners((prev) =>
+        prev.map((x) => (x.id === b.id ? { ...x, active: next } : x))
       );
-      toast.success(t('admin.bannerUpdated'));
-    } else {
-      const newBanner: Banner = {
-        id: Date.now().toString(),
-        ...formData,
-      };
-      localBanners.push(newBanner);
-      toast.success(t('admin.bannerAdded'));
+
+      toast.success(t("admin.statusUpdated"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("admin.updateFailed") ?? "Update failed");
     }
-    setBanners([...localBanners]);
-    setDialogOpen(false);
   };
 
-  const handleDelete = (banner: Banner) => {
-    setBannerToDelete(banner);
-    setDeleteDialogOpen(true);
+  const askDelete = (b: Banner) => {
+    setBannerToDelete(b);
+    setDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (bannerToDelete) {
-      // TODO: Replace with actual API call to backend
-      localBanners = localBanners.filter(b => b.id !== bannerToDelete.id);
-      setBanners([...localBanners]);
-      toast.success(t('admin.bannerDeleted'));
+  const confirmDelete = async () => {
+    if (!bannerToDelete) return;
+
+    setDeleting(true);
+    try {
+      await adminDeleteBanner(bannerToDelete.id);
+      toast.success(t("admin.deleted") ?? "Deleted");
+      setBanners((prev) => prev.filter((x) => x.id !== bannerToDelete.id));
+      setDeleteOpen(false);
+      setBannerToDelete(null);
+    } catch (e) {
+      console.error(e);
+      toast.error(t("admin.deleteFailed") ?? "Delete failed");
+    } finally {
+      setDeleting(false);
     }
-    setDeleteDialogOpen(false);
-    setBannerToDelete(null);
   };
+
+  const titleLabel = t("admin.banners") ?? "Banners";
+  const addLabel = t("admin.addBanner") ?? "Add Banner";
 
   return (
     <AdminLayout>
       <AdminPageHeader
-        title={t('admin.ads')}
-        breadcrumbs={[{ label: t('admin.ads') }]}
+        title={titleLabel}
+        breadcrumbs={[{ label: titleLabel }]}
         actions={
-          <Button onClick={openAddDialog}>
+          <Button onClick={openAdd}>
             <Plus className="h-4 w-4 me-2" />
-            {t('admin.addBanner')}
+            {addLabel}
           </Button>
         }
       />
 
-      {loading ? (
-        <p>{t('common.loading')}</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {banners.map((banner) => (
-            <Card key={banner.id} className="overflow-hidden">
-              <div className="aspect-[16/9] relative">
-                <img
-                  src={banner.image}
-                  alt={lang === 'ar' ? banner.titleAr : banner.title}
-                  className="w-full h-full object-cover"
-                />
-                <Badge
-                  className="absolute top-2 end-2"
-                  variant={banner.active ? 'default' : 'secondary'}
-                >
-                  {banner.active ? t('admin.active') : t('admin.inactive')}
-                </Badge>
-              </div>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">
-                      {lang === 'ar' ? banner.titleAr : banner.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                      {lang === 'ar' ? banner.descriptionAr : banner.description}
-                    </p>
-                    <a
-                      href={banner.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary flex items-center gap-1 mt-2"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {banner.link}
-                    </a>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Switch
-                      checked={banner.active}
-                      onCheckedChange={() => handleToggleStatus(banner)}
-                    />
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(banner)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(banner)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>{titleLabel}</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-center text-muted-foreground">
+              {t("common.loading")}
+            </div>
+          ) : banners.length === 0 ? (
+            <div className="py-10 text-center text-muted-foreground">
+              {t("admin.noBanners") ?? "No banners"}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {banners.map((b) => (
+                <Card key={String(b.id)}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={b.image}
+                        alt={lang === "ar" ? b.titleAr : b.title}
+                        className="h-20 w-28 object-cover rounded-md border"
+                      />
+
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">
+                            {lang === "ar" ? b.titleAr : b.title}
+                          </h3>
+                          <Badge variant={b.active ? "default" : "secondary"}>
+                            {b.active
+                              ? t("admin.active") ?? "Active"
+                              : t("admin.inactive") ?? "Inactive"}
+                          </Badge>
+                        </div>
+
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {lang === "ar" ? b.descriptionAr : b.description}
+                        </p>
+
+                        {b.link && b.link !== "#" && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Link: {b.link}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            {t("admin.status") ?? "Status"}
+                          </span>
+                          <Switch
+                            checked={b.active}
+                            onCheckedChange={() => handleToggleActive(b)}
+                            aria-label={t("admin.status") ?? "Status"}
+                          />
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => openEdit(b)}
+                          aria-label={t("common.edit") ?? "Edit"}
+                          title={t("common.edit") ?? "Edit"}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => askDelete(b)}
+                          aria-label={t("common.delete") ?? "Delete"}
+                          title={t("common.delete") ?? "Delete"}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+      <Dialog open={formOpen} onOpenChange={(v) => (!v ? closeForm() : setFormOpen(true))}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingBanner ? t('admin.editBanner') : t('admin.addBanner')}
+              {isEditMode
+                ? t("admin.editBanner") ?? "Edit Banner"
+                : t("admin.addBanner") ?? "Add Banner"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('admin.titleEn')}</Label>
+                <Label htmlFor="title_en">{t("admin.titleEn") ?? "Title (EN)"}</Label>
                 <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  id="title_en"
+                  value={form.title_en}
+                  onChange={(e) => setForm((p) => ({ ...p, title_en: e.target.value }))}
+                  required
                 />
               </div>
+
               <div className="space-y-2">
-                <Label>{t('admin.titleAr')}</Label>
+                <Label htmlFor="title_ar">{t("admin.titleAr") ?? "Title (AR)"}</Label>
                 <Input
-                  value={formData.titleAr}
-                  onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })}
+                  id="title_ar"
                   dir="rtl"
+                  value={form.title_ar}
+                  onChange={(e) => setForm((p) => ({ ...p, title_ar: e.target.value }))}
+                  required
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('admin.descriptionEn')}</Label>
-                <Input
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                <Label htmlFor="desc_en">
+                  {t("admin.descriptionEn") ?? "Description (EN)"}
+                </Label>
+                <Textarea
+                  id="desc_en"
+                  rows={3}
+                  value={form.description_en}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, description_en: e.target.value }))
+                  }
                 />
               </div>
+
               <div className="space-y-2">
-                <Label>{t('admin.descriptionAr')}</Label>
-                <Input
-                  value={formData.descriptionAr}
-                  onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
+                <Label htmlFor="desc_ar">
+                  {t("admin.descriptionAr") ?? "Description (AR)"}
+                </Label>
+                <Textarea
+                  id="desc_ar"
                   dir="rtl"
+                  rows={3}
+                  value={form.description_ar}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, description_ar: e.target.value }))
+                  }
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="link">{t("admin.link") ?? "Link"}</Label>
+                <Input
+                  id="link"
+                  placeholder="https://example.com"
+                  value={form.link}
+                  onChange={(e) => setForm((p) => ({ ...p, link: e.target.value }))}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border rounded-md px-3 py-2">
+                <div>
+                  <div className="text-sm font-medium">
+                    {t("admin.active") ?? "Active"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("admin.status") ?? "Status"}
+                  </div>
+                </div>
+                <Switch
+                  checked={form.active}
+                  onCheckedChange={(v) => setForm((p) => ({ ...p, active: !!v }))}
+                  aria-label={t("admin.status") ?? "Status"}
+                />
+              </div>
+            </div>
+
+            {/* Image */}
             <div className="space-y-2">
-              <Label>{t('admin.imageUrl')}</Label>
+              <Label htmlFor="image">
+                {t("admin.image") ?? "Image"}
+                {!isEditMode && <span className="text-destructive"> *</span>}
+              </Label>
+
               <Input
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
               />
+
+              <div className="flex gap-4 items-center">
+                <div className="h-20 w-28 rounded-md border overflow-hidden bg-muted">
+                  <img
+                    src={previewUrl || form.currentImageUrl || "/placeholder.svg"}
+                    alt="preview"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  {isEditMode
+                    ? (t("admin.imageOptionalOnEdit") ??
+                        "On edit: you can leave image empty to keep current image.")
+                    : (t("admin.imageRequiredOnCreate") ??
+                        "On create: image is required.")}
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('admin.linkUrl')}</Label>
-              <Input
-                value={formData.link}
-                onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label>{t('admin.active')}</Label>
-              <Switch
-                checked={formData.active}
-                onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editingBanner ? t('common.save') : t('admin.addBanner')}
-            </Button>
-          </DialogFooter>
+
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={closeForm} disabled={saving}>
+                {t("common.cancel") ?? "Cancel"}
+              </Button>
+              <Button type="submit" disabled={!canSubmit || saving}>
+                {saving ? (t("common.loading") ?? "Saving...") : (t("common.save") ?? "Save")}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Delete confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('admin.deleteBanner')}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("admin.deleteBanner") ?? "Delete banner"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {t('admin.deleteBannerConfirm')}
+              {(t("admin.deleteBannerConfirm") ?? "Are you sure you want to delete")}{" "}
+              "{lang === "ar" ? bannerToDelete?.titleAr : bannerToDelete?.title}"؟
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
-              {t('common.delete')}
+            <AlertDialogCancel disabled={deleting}>
+              {t("common.cancel") ?? "Cancel"}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground"
+            >
+              {deleting ? (t("common.loading") ?? "Deleting...") : (t("common.delete") ?? "Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </AdminLayout>
   );
-};
-
-export default AdminBannersPage;
+}

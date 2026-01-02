@@ -14,6 +14,8 @@ import { useLang } from '@/context/LangContext';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useTax } from '@/context/TaxContext';
 import { createOrder } from '@/services/ordersService';
+import { createAddress } from '@/services/addressesService';
+import { createNotification } from '@/services/notificationsService';
 import { toast } from 'sonner';
 
 const CheckoutPage = () => {
@@ -41,7 +43,7 @@ const CheckoutPage = () => {
     city?: string;
     zipCode?: string;
   }>({
-    type: 'custom',
+    type: 'map',
     address: '',
     city: '',
     zipCode: '',
@@ -66,30 +68,65 @@ const CheckoutPage = () => {
     e.preventDefault();
     setLoading(true);
 
+    // منع إتمام الطلب قبل تسجيل الدخول
+    if (!user) {
+      toast.error(t('auth.loginRequired'));
+      navigate('/auth/register?redirect=/checkout');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Create order
+      // Validate required fields: address, city, and map link
+      const hasAddress = (formData.address || '').trim().length > 0;
+      const hasCity = (formData.city || '').trim().length > 0;
+      const hasMapLink = (location.mapLink || '').trim().length > 0;
+      if (!hasAddress || !hasCity) {
+        toast.error(t('checkout.addressRequired') || 'Please enter full address (street and city)');
+        setLoading(false);
+        return;
+      }
+      if (!hasMapLink) {
+        toast.error(t('location.mapLinkRequired') || 'Please paste a Google Maps link to your location');
+        setLoading(false);
+        return;
+      }
+
+      // 1. Create Address
+      const street = (location.address || formData.address || 'Pinned Location');
+      const cityToSend = (location.city || formData.city);
+
+      const addressId = await createAddress({
+        userId: user!.id,
+        fullName: formData.name,
+        phone: formData.phone,
+        city: cityToSend,
+        street,
+        locationUrl: location.mapLink,
+      });
+
+      // 2. Create Order
       const order = await createOrder({
-        userId: user?.id || 'guest',
-        status: 'pending',
+        user_id: user!.id,
+        address_id: addressId,
         items: items.map(item => ({
-          productId: item.id,
-          name: item.name,
+          product_id: item.id,
           quantity: item.quantity,
           price: item.price,
         })),
-        subtotal: totalPrice,
-        tax: taxAmount,
-        shipping,
-        total,
-        deliveryAddress: {
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          zipCode: formData.zipCode,
-        },
-        location: (location.mapLink || location.address) ? location : undefined,
-        paymentMethod,
+        total_amount: total,
+        vat_amount: taxAmount,
+        currency: 'SAR',
+        payment_method: paymentMethod === 'cashOnDelivery' ? 'cod' : 'online',
+      });
+
+      await createNotification({
+        userId: user!.id,
+        titleEn: "New Order Created",
+        titleAr: "تم إنشاء طلب جديد",
+        messageEn: `Your order #${order.orderId} has been placed successfully.`,
+        messageAr: `تم إنشاء طلبك رقم #${order.orderId} بنجاح.`,
+        type: "order",
       });
 
       // Clear cart
@@ -99,7 +136,7 @@ const CheckoutPage = () => {
       toast.success(t('checkout.orderSuccess'));
 
       // Navigate to success page
-      navigate(`/order-success/${order.id}`);
+      navigate(`/order-success/${order.orderId}`);
     } catch (error) {
       console.error('Error creating order:', error);
       toast.error(t('checkout.orderError'));
@@ -162,52 +199,21 @@ const CheckoutPage = () => {
 
             {/* Delivery Location */}
             <LocationSelector
-              onLocationChange={setLocation}
+              onLocationChange={(loc) => {
+                setLocation(loc);
+                setFormData(prev => ({
+                  ...prev,
+                  address: loc.address || prev.address,
+                  city: loc.city || prev.city,
+                  zipCode: loc.zipCode || prev.zipCode
+                }));
+              }}
             />
-
-            {/* Delivery Address */}
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-6">{t('checkout.deliveryAddress')}</h2>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="address">{t('checkout.address')}</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="city">{t('checkout.city')}</Label>
-                    <Input
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="zipCode">{t('checkout.zipCode')}</Label>
-                    <Input
-                      id="zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
 
             {/* Payment Method */}
             <Card className="p-6">
               <h2 className="text-xl font-bold mb-6">{t('checkout.paymentMethod')}</h2>
-              <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+              <RadioGroup value={paymentMethod} onValueChange={(value: 'cashOnDelivery' | 'onlinePayment') => setPaymentMethod(value)}>
                 <div className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-muted">
                   <RadioGroupItem value="cashOnDelivery" id="cash" />
                   <Label htmlFor="cash" className="flex items-center gap-2 cursor-pointer flex-1">

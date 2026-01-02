@@ -91,12 +91,12 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     setSubmitting(true);
     try {
       const created = await addReview({
-        product_id: productId,
-        user_id: user.id,
-        rating: newRating,
-        comment_en: comment,
-        comment_ar: comment, // مؤقتًا نفس النص
-      });
+  product_id: productId,
+  user_id: user.id,
+  rating: newRating,
+  review_text: comment,
+});
+
 
       setReviews((prev) => [created, ...prev]);
       setNewComment('');

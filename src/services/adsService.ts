@@ -32,16 +32,12 @@ type ApiCreateBannerResponse = {
 
 export interface Banner {
   id: string;
-
   title: string;
   titleAr: string;
-
   description: string;
   descriptionAr: string;
-
   image: string;
   link: string;
-
   active: boolean;
 }
 
@@ -55,10 +51,7 @@ function mapApiBanner(b: ApiBanner): Banner {
     titleAr: b.title_ar,
     description: b.description_en ?? "",
     descriptionAr: b.description_ar ?? "",
-    image:
-      b.image_url && b.image_url.trim().length > 0
-        ? b.image_url
-        : "/placeholder-banner.jpg",
+    image: b.image_url && b.image_url.trim().length > 0 ? b.image_url : "/placeholder-banner.jpg",
     link: b.link ?? "#",
     active: Boolean(b.active),
   };
@@ -79,7 +72,7 @@ export const getActiveBanners = async (): Promise<Banner[]> => {
 };
 
 // =======================
-// ADMIN CRUD
+// ADMIN CRUD (multipart/form-data)
 // =======================
 
 export const adminCreateBanner = async (payload: {
@@ -87,13 +80,22 @@ export const adminCreateBanner = async (payload: {
   title_ar: string;
   description_en?: string;
   description_ar?: string;
-  image_url?: string;
   link?: string;
   active?: boolean;
+  imageFile: File; // required
 }): Promise<{ bannerId: string }> => {
+  const fd = new FormData();
+  fd.append("title_en", payload.title_en);
+  fd.append("title_ar", payload.title_ar);
+  fd.append("description_en", payload.description_en ?? "");
+  fd.append("description_ar", payload.description_ar ?? "");
+  fd.append("link", payload.link ?? "");
+  fd.append("active", payload.active === false ? "0" : "1");
+  fd.append("image", payload.imageFile);
+
   const res = await apiRequest<ApiCreateBannerResponse>("/banners/create.php", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: fd,
   });
 
   return { bannerId: String(res.banner_id) };
@@ -101,20 +103,27 @@ export const adminCreateBanner = async (payload: {
 
 export const adminUpdateBanner = async (payload: {
   id: number | string;
-  title_en?: string;
-  title_ar?: string;
+  title_en: string;
+  title_ar: string;
   description_en?: string;
   description_ar?: string;
-  image_url?: string;
   link?: string;
   active?: boolean;
+  imageFile?: File | null; // optional
 }): Promise<void> => {
+  const fd = new FormData();
+  fd.append("id", String(payload.id));
+  fd.append("title_en", payload.title_en);
+  fd.append("title_ar", payload.title_ar);
+  fd.append("description_en", payload.description_en ?? "");
+  fd.append("description_ar", payload.description_ar ?? "");
+  fd.append("link", payload.link ?? "");
+  fd.append("active", payload.active === false ? "0" : "1");
+  if (payload.imageFile) fd.append("image", payload.imageFile);
+
   await apiRequest<ApiOkResponse>("/banners/update.php", {
     method: "POST",
-    body: JSON.stringify({
-      ...payload,
-      id: Number(payload.id),
-    }),
+    body: fd,
   });
 };
 
@@ -127,18 +136,17 @@ export const adminDeleteBanner = async (id: number | string): Promise<void> => {
 
 /**
  * Toggle banner active status (Admin).
- * IMPORTANT: We pass the desired active state to backend.
+ * IMPORTANT: passes desired active state to backend.
  */
-export const toggleBannerStatus = async (
-  bannerId: string | number,
-  active: boolean
-): Promise<boolean> => {
+export const toggleBannerStatus = async (bannerId: string | number, active: boolean): Promise<boolean> => {
+  // ملاحظة: بما أن update.php صار FormData، نخليه FormData أيضاً للتوافق
+  const fd = new FormData();
+  fd.append("id", String(bannerId));
+  fd.append("active", active ? "1" : "0");
+
   await apiRequest<ApiOkResponse>("/banners/update.php", {
     method: "POST",
-    body: JSON.stringify({
-      id: Number(bannerId),
-      active,
-    }),
+    body: fd,
   });
 
   return true;

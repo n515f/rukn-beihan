@@ -6,7 +6,7 @@ import ProductCard from '@/components/product/ProductCard';
 import { Product } from '@/services/productsService';
 import { useLang } from '@/context/LangContext';
 
-interface ProductCarouselProps {
+ interface ProductCarouselProps {
   title: string;
   subtitle?: string;
   products: Product[];
@@ -38,46 +38,23 @@ const ProductCarousel = ({ title, subtitle, products, viewAllLink = '/catalog' }
             <h2 className="text-2xl md:text-3xl font-bold">{title}</h2>
             {subtitle && <p className="text-muted-foreground mt-1">{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => scroll('left')}
-                className="hover:bg-primary/10 hover:border-primary"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => scroll('right')}
-                className="hover:bg-primary/10 hover:border-primary"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-            <Button asChild variant="outline" className="hidden sm:flex">
-              <Link to={viewAllLink}>
-                {t('catalog.viewAll')}
-                <ArrowRight className={`h-4 w-4 ${lang === 'ar' ? 'mr-2 rotate-180' : 'ml-2'}`} />
-              </Link>
-            </Button>
-          </div>
+          {/* Removed arrow controls */}
+          <Button asChild variant="outline" className="hidden sm:flex">
+            <Link to={viewAllLink}>
+              {t('catalog.viewAll')}
+              <ArrowRight className={`h-4 w-4 ${lang === 'ar' ? 'mr-2 rotate-180' : 'ml-2'}`} />
+            </Link>
+          </Button>
         </div>
 
-        {/* Products Carousel */}
-        <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          dir={lang === 'ar' ? 'rtl' : 'ltr'}
-        >
+        {/* Products Grid for desktop/tablet: 5 per row */}
+        <div className="hidden sm:grid gap-4 md:grid-cols-5" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           {products.map((product) => (
-            <div key={product.id} className="flex-shrink-0 w-[240px] md:w-[280px] snap-start">
+            <div key={product.id} className="w-full h-full">
               <ProductCard
                 id={product.id}
                 name={product.name}
+                nameAr={product.nameAr}
                 brand={product.brand}
                 price={product.price}
                 oldPrice={product.oldPrice}
@@ -87,6 +64,35 @@ const ProductCarousel = ({ title, subtitle, products, viewAllLink = '/catalog' }
                 stock={product.stock}
                 bestSeller={product.bestSeller}
                 isNew={product.isNew}
+                className="h-full"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile horizontal swipe: keep left/right swipe */}
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 sm:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          dir={lang === 'ar' ? 'rtl' : 'ltr'}
+        >
+          {products.map((product) => (
+            <div key={product.id} className="flex-shrink-0 w-[240px] md:w-[280px] snap-start">
+              <ProductCard
+                id={product.id}
+                name={product.name}
+                nameAr={product.nameAr}
+                brand={product.brand}
+                price={product.price}
+                oldPrice={product.oldPrice}
+                image={product.image}
+                rating={product.rating}
+                reviews={product.reviews}
+                stock={product.stock}
+                bestSeller={product.bestSeller}
+                isNew={product.isNew}
+                className="h-full"
               />
             </div>
           ))}

@@ -35,12 +35,18 @@ const AdminOrdersPage = () => {
   }, []);
 
   const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
-    // TODO: Replace with actual API call to backend
-    await updateOrderStatus(orderId, newStatus);
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
-    toast.success(t('admin.statusUpdated'));
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+      toast.success(t('admin.statusUpdated'));
+      // Notify other admin pages (e.g., products list) to refresh stock
+      window.dispatchEvent(new CustomEvent('stock-updated'));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t('admin.updateFailed');
+      toast.error(msg || t('admin.updateFailed'));
+    }
   };
 
   const getStatusBadgeVariant = (status: Order['status']) => {

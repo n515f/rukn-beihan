@@ -8,11 +8,16 @@ import {
   Star, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  LifeBuoy
 } from 'lucide-react';
+import { Tags, Tag } from 'lucide-react';
 import { useLang } from '@/context/LangContext';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AdminSidebarProps {
   collapsed: boolean;
@@ -21,13 +26,20 @@ interface AdminSidebarProps {
 
 const AdminSidebar = ({ collapsed, onToggle }: AdminSidebarProps) => {
   const { t, lang } = useLang();
+  const { user } = useAuth();
   const location = useLocation();
 
   const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: t('admin.dashboard') },
+    { path: '/admin/categories', icon: Tags, label: t('admin.categories') },
+    { path: '/admin/brands', icon: Tag, label: t('products.brands') },
     { path: '/admin/products', icon: Package, label: t('admin.products') },
     { path: '/admin/orders', icon: ShoppingCart, label: t('admin.orders') },
     { path: '/admin/banners', icon: Megaphone, label: t('admin.ads') },
+    { path: '/admin/notifications', icon: Megaphone, label: t('admin.notifications') },
+    // Added messages and support inbox entries
+    { path: '/admin/messages', icon: MessageSquare, label: t('admin.messages') },
+    { path: '/admin/support-inbox', icon: LifeBuoy, label: t('admin.supportInbox') },
     { path: '/admin/users', icon: Users, label: t('admin.users') },
     { path: '/admin/reviews', icon: Star, label: t('admin.reviews') },
     { path: '/admin/settings', icon: Settings, label: t('account.settings') },
@@ -50,12 +62,18 @@ const AdminSidebar = ({ collapsed, onToggle }: AdminSidebarProps) => {
     >
       {/* Logo / Brand */}
       <div className="h-16 flex items-center justify-center border-b border-border px-4">
-        {!collapsed && (
-          <h1 className="text-lg font-bold text-primary truncate">
-            {t('common.admin')}
-          </h1>
-        )}
-        {collapsed && (
+        {!collapsed ? (
+          <div className="flex items-center gap-3 w-full">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={user?.avatarUrl} alt={user?.name} />
+              <AvatarFallback>{user?.name?.slice(0,1) || '?'}</AvatarFallback>
+            </Avatar>
+            <div className="truncate">
+              <p className="text-sm font-semibold">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{t('common.admin')}</p>
+            </div>
+          </div>
+        ) : (
           <LayoutDashboard className="h-6 w-6 text-primary" />
         )}
       </div>

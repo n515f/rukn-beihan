@@ -281,7 +281,7 @@ const OrderTrackingPage = () => {
                   <p className="text-sm text-muted-foreground">
                     {t('checkout.paymentMethod')}
                   </p>
-                  <p className="font-medium">{t('checkout.cashOnDelivery')}</p>
+                  <p className="font-medium">{t(order.paymentMethod === 'cod' ? 'checkout.cashOnDelivery' : 'checkout.onlinePayment')}</p>
                 </div>
               </div>
 
@@ -327,6 +327,46 @@ const OrderTrackingPage = () => {
               <p className="text-sm text-muted-foreground">
                 {order.deliveryAddress.city}, {order.deliveryAddress.zipCode}
               </p>
+              
+              {order.deliveryAddress.locationUrl && (
+                <div className="mt-2">
+                  {/* Try to embed map if possible */}
+                  {(() => {
+                    const url = order.deliveryAddress.locationUrl;
+                    const patterns = [
+                      /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+                      /q=(-?\d+\.\d+),(-?\d+\.\d+)/,
+                      /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,
+                      /center=(-?\d+\.\d+),(-?\d+\.\d+)/,
+                      /query=(-?\d+\.\d+),(-?\d+\.\d+)/,
+                    ];
+                    const match = patterns.map((re) => url.match(re)).find((m) => !!m);
+                    
+                    if (match) {
+                      const embedUrl = `https://maps.google.com/maps?q=${match[1]},${match[2]}&z=15&output=embed`;
+                      return (
+                        <div className="relative h-48 bg-muted rounded-lg overflow-hidden border mb-2">
+                          <iframe 
+                            src={embedUrl}
+                            className="w-full h-full border-0"
+                            loading="lazy"
+                            title={t('location.mapPreview') || "Map preview"}
+                            allowFullScreen
+                          />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  <Button variant="outline" size="sm" className="w-full" asChild>
+                    <a href={order.deliveryAddress.locationUrl} target="_blank" rel="noopener noreferrer">
+                      <MapPin className="h-4 w-4 me-2" />
+                      {t('location.viewOnMap') || "View on Map"}
+                    </a>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

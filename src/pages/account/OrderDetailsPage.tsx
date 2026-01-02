@@ -116,6 +116,21 @@ const OrderDetailsPage = () => {
                   </div>
                 ))}
               </div>
+              {order.status === 'delivered' && (
+                <div className="mt-6 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-semibold mb-3">{t('reviews.writeReview')}</h4>
+                  <div className="grid gap-2">
+                    {order.items.map((item) => (
+                      <div key={item.productId} className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{item.name}</span>
+                        <Button asChild size="sm">
+                          <a href={`/product/${item.productId}#reviews`}>{t('reviews.writeReview')}</a>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -163,8 +178,38 @@ const OrderDetailsPage = () => {
               <p className="text-sm text-muted-foreground">{order.deliveryAddress.phone}</p>
               <p className="text-sm text-muted-foreground">{order.deliveryAddress.address}</p>
               <p className="text-sm text-muted-foreground">
-                {order.deliveryAddress.city}, {order.deliveryAddress.zipCode}
+                {order.deliveryAddress.city}{order.deliveryAddress.zipCode ? `, ${order.deliveryAddress.zipCode}` : ''}
               </p>
+
+              {order.deliveryAddress.locationUrl && (
+                <div className="mt-4">
+                  {(() => {
+                    const url = order.deliveryAddress.locationUrl!;
+                    const patterns = [/@(-?\d+\.\d+),(-?\d+\.\d+)/, /q=(-?\d+\.\d+),(-?\d+\.\d+)/, /ll=(-?\d+\.\d+),(-?\d+\.\d+)/, /center=(-?\d+\.\d+),(-?\d+\.\d+)/, /query=(-?\d+\.\d+),(-?\d+\.\d+)/];
+                    const match = patterns.map((re) => url.match(re)).find((m) => !!m);
+                    if (match) {
+                      const embedUrl = `https://maps.google.com/maps?q=${match[1]},${match[2]}&z=15&output=embed`;
+                      return (
+                        <div className="relative h-40 bg-muted rounded-lg overflow-hidden border mb-2">
+                          <iframe
+                            src={embedUrl}
+                            className="w-full h-full border-0"
+                            loading="lazy"
+                            title={t('location.mapPreview') || 'Map preview'}
+                            allowFullScreen
+                          />
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <Button variant="outline" size="sm" className="w-full" asChild>
+                    <a href={order.deliveryAddress.locationUrl} target="_blank" rel="noopener noreferrer">
+                      {t('location.viewOnMap') || 'View on Map'}
+                    </a>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

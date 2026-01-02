@@ -1,20 +1,6 @@
 // src/services/productsService.ts
-// Service that adapts backend product data to the UI product shape.
-// Uses shared apiRequest from src/services/api.ts
+import { apiRequest, ApiOkResponse, API_BASE } from "./api";
 
-import { apiRequest, ApiOkResponse } from "./api";
-
-// Optional: keep small delay if you want UI skeletons to appear consistently
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Backend shape (from PHP API):
- * - products/list.php (public) should ideally return JOINed category names:
- *   { success: true, products: [{ id, name_en, name_ar, description_en, description_ar, brand, category_id, category_name_en, category_name_ar, price, stock, image_url, active }] }
- *
- * - products/admin-list.php (admin) returns the same + inactive too.
- */
 export type ApiProduct = {
   id: number;
   name_en: string;
@@ -56,10 +42,9 @@ export interface Product {
 
   brand: string;
 
-  // NEW: categories are stored in DB
   categoryId: number;
-  categoryName: string;   // EN (fallback if missing)
-  categoryNameAr: string; // AR (fallback if missing)
+  categoryName: string;
+  categoryNameAr: string;
 
   price: number;
   oldPrice: number | null;
@@ -82,12 +67,35 @@ export interface Product {
   active: boolean;
 }
 
-function mapApiProduct(p: ApiProduct): Product {
-  const image =
-    p.image_url && p.image_url.trim().length > 0
-      ? p.image_url
-      : "/placeholder-battery.jpg";
+function resolveImageUrl(imageUrl?: string | null): string {
+  if (!imageUrl || !String(imageUrl).trim()) return "/placeholder-battery.jpg";
 
+  const url = String(imageUrl).trim();
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+  const apiOrigin = API_BASE.replace(/\/api\/?$/, ""); // http://localhost/rukn-api
+  const hostOrigin = (() => {
+    try {
+      return new URL(API_BASE).origin; // http://localhost
+    } catch {
+      return "http://localhost";
+    }
+  })();
+
+  // إذا كانت مخزنة: /uploads/products/x.jpg  => http://localhost/rukn-api/uploads/products/x.jpg
+  if (url.startsWith("/uploads/")) return `${apiOrigin}${url}`;
+
+  // إذا كانت مخزنة: /rukn-api/uploads/products/x.jpg => http://localhost/rukn-api/uploads/products/x.jpg
+  if (url.startsWith("/rukn-api/")) return `${hostOrigin}${url}`;
+
+  // إذا كانت بدون / في البداية
+  if (url.startsWith("uploads/")) return `${apiOrigin}/${url}`;
+
+  // fallback
+  return `${apiOrigin}/${url}`;
+}
+
+function mapApiProduct(p: ApiProduct): Product {
   return {
     id: String(p.id),
     name: p.name_en,
@@ -100,20 +108,20 @@ function mapApiProduct(p: ApiProduct): Product {
     categoryNameAr: (p.category_name_ar ?? "التصنيف").toString(),
 
     price: Number(p.price),
-    oldPrice: null, // TODO: add old_price later if needed
+    oldPrice: null,
 
-    image,
+    image: resolveImageUrl(p.image_url),
 
-    rating: 4.6, // TODO: backend rating_avg
-    reviews: 0, // TODO: backend reviews_count
+    rating: 4.6,
+    reviews: 0,
 
     stock: Number(p.stock),
 
     description: p.description_en ?? "",
     descriptionAr: p.description_ar ?? "",
 
-    specifications: {}, // TODO: backend specs JSON
-    features: [], // TODO: backend features JSON
+    specifications: {},
+    features: [],
 
     bestSeller: Number(p.stock) > 20,
     isNew: Number(p.id) > 50,
@@ -122,18 +130,7 @@ function mapApiProduct(p: ApiProduct): Product {
   };
 }
 
-/**
- * PUBLIC (used by UI)
- * Uses products/list.php by default.
- * If your list.php does not include category_name_en/ar yet, either:
- * - update list.php to JOIN categories (recommended), OR
- * - switch PUBLIC_PRODUCTS_ENDPOINT to "/products/admin-list.php" temporarily.
- */
 const PUBLIC_PRODUCTS_ENDPOINT = "/products/list.php";
-
-/**
- * ADMIN (used by admin UI)
- */
 const ADMIN_PRODUCTS_ENDPOINT = "/products/admin-list.php";
 
 export const getProducts = async (): Promise<Product[]> => {
@@ -147,6 +144,7 @@ export const getAdminProducts = async (): Promise<Product[]> => {
   return (data.products ?? []).map(mapApiProduct);
 };
 
+// ✅ Public: يخفي inactive
 export const getProductById = async (id: string): Promise<Product | null> => {
   const numericId = Number(id);
   if (!Number.isFinite(numericId)) return null;
@@ -156,9 +154,7 @@ export const getProductById = async (id: string): Promise<Product | null> => {
       `/products/get.php?id=${encodeURIComponent(String(numericId))}`
     );
 
-    // For public UI: if product inactive, hide it
     if (!data.product?.active) return null;
-
     return mapApiProduct(data.product);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
@@ -167,6 +163,24 @@ export const getProductById = async (id: string): Promise<Product | null> => {
   }
 };
 
+// ✅ Admin: يسمح حتى لو inactive
+export const getAdminProductById = async (id: string): Promise<Product | null> => {
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId)) return null;
+
+  try {
+    const data = await apiRequest<ApiProductGetResponse>(
+      `/products/get.php?id=${encodeURIComponent(String(numericId))}`
+    );
+    return data.product ? mapApiProduct(data.product) : null;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    if (msg.includes("404") || msg.toLowerCase().includes("not found")) return null;
+    throw e;
+  }
+};
+
+// ✅ FIX: HomePage يحتاجها
 export const getBestSellers = async (): Promise<Product[]> => {
   const products = await getProducts();
   return products.filter((p) => p.bestSeller);
@@ -189,18 +203,12 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
     const cat = (p.categoryName ?? "").toLowerCase();
     const catAr = (p.categoryNameAr ?? "").toLowerCase();
 
-    return (
-      name.includes(q) ||
-      nameAr.includes(q) ||
-      brand.includes(q) ||
-      cat.includes(q) ||
-      catAr.includes(q)
-    );
+    return name.includes(q) || nameAr.includes(q) || brand.includes(q) || cat.includes(q) || catAr.includes(q);
   });
 };
 
 // =======================
-// ADMIN CRUD (UI only)
+// ADMIN CRUD (multipart)
 // =======================
 
 export const adminCreateProduct = async (payload: {
@@ -209,35 +217,61 @@ export const adminCreateProduct = async (payload: {
   description_en?: string;
   description_ar?: string;
   brand: string;
-  category_id: number; // UPDATED
+  category_id: number;
   price: number;
   stock: number;
-  image_url?: string;
   active?: boolean;
+  imageFile: File; // REQUIRED
 }): Promise<{ productId: string }> => {
+  const fd = new FormData();
+  fd.append("name_en", payload.name_en);
+  fd.append("name_ar", payload.name_ar);
+  fd.append("description_en", payload.description_en ?? "");
+  fd.append("description_ar", payload.description_ar ?? "");
+  fd.append("brand", payload.brand);
+  fd.append("category_id", String(payload.category_id));
+  fd.append("price", String(payload.price));
+  fd.append("stock", String(payload.stock));
+  fd.append("active", String(payload.active ? 1 : 0));
+  fd.append("image", payload.imageFile);
+
   const res = await apiRequest<ApiCreateResponse>("/products/create.php", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: fd,
   });
+
   return { productId: String(res.product_id) };
 };
 
 export const adminUpdateProduct = async (payload: {
   id: number | string;
-  name_en?: string;
-  name_ar?: string;
+  name_en: string;
+  name_ar: string;
   description_en?: string;
   description_ar?: string;
-  brand?: string;
-  category_id?: number; // UPDATED
-  price?: number;
-  stock?: number;
-  image_url?: string;
+  brand: string;
+  category_id: number;
+  price: number;
+  stock: number;
   active?: boolean;
+  imageFile?: File | null; // OPTIONAL
 }): Promise<void> => {
+  const fd = new FormData();
+  fd.append("id", String(payload.id));
+  fd.append("name_en", payload.name_en);
+  fd.append("name_ar", payload.name_ar);
+  fd.append("description_en", payload.description_en ?? "");
+  fd.append("description_ar", payload.description_ar ?? "");
+  fd.append("brand", payload.brand);
+  fd.append("category_id", String(payload.category_id));
+  fd.append("price", String(payload.price));
+  fd.append("stock", String(payload.stock));
+  fd.append("active", String(payload.active ? 1 : 0));
+  if (payload.imageFile) fd.append("image", payload.imageFile);
+
   await apiRequest<ApiOkResponse>("/products/update.php", {
     method: "POST",
-    body: JSON.stringify({ ...payload, id: Number(payload.id) }),
+    body: fd,
   });
 };
 
@@ -248,13 +282,94 @@ export const adminDeleteProduct = async (id: number | string): Promise<void> => 
   });
 };
 
+// NEW: Safely adjust stock by delta (negative/positive) after fetching full product
+export const adminAdjustProductStock = async (
+  productId: number | string,
+  delta: number
+): Promise<number> => {
+  const p = await getAdminProductById(String(productId));
+  if (!p) throw new Error("Product not found");
+
+  const newStock = Math.max(0, Number(p.stock) + Number(delta));
+
+  await adminUpdateProduct({
+    id: productId,
+    name_en: p.name,
+    name_ar: p.nameAr ?? p.name,
+    description_en: p.description ?? "",
+    description_ar: p.descriptionAr ?? "",
+    brand: p.brand,
+    category_id: p.categoryId,
+    price: p.price,
+    stock: newStock,
+    active: p.active,
+    imageFile: null,
+  });
+
+  return newStock;
+};
+
+// ✅ NEW: Strict decrement function that rejects if stock would go below 0
+export const adminDecrementProductStock = async (
+  productId: number | string,
+  qty: number
+): Promise<number> => {
+  const p = await getAdminProductById(String(productId));
+  if (!p) throw new Error("Product not found");
+
+  const decrement = Math.max(0, Number(qty));
+  const current = Number(p.stock);
+
+  if (!Number.isFinite(decrement) || decrement <= 0) {
+    throw new Error("Invalid decrement quantity");
+  }
+
+  if (current < decrement) {
+    throw new Error(
+      `Insufficient stock for product ${productId}. Available: ${current}, required: ${decrement}`
+    );
+  }
+
+  const newStock = current - decrement;
+
+  await adminUpdateProduct({
+    id: productId,
+    name_en: p.name,
+    name_ar: p.nameAr ?? p.name,
+    description_en: p.description ?? "",
+    description_ar: p.descriptionAr ?? "",
+    brand: p.brand,
+    category_id: p.categoryId,
+    price: p.price,
+    stock: newStock,
+    active: p.active,
+    imageFile: null,
+  });
+
+  return newStock;
+};
+
+// ✅ شغّال: يجلب المنتج ثم يحدّث active مع نفس الحقول (لأن update.php يتطلب الحقول)
 export const adminToggleProductActive = async (
   id: number | string,
   active: boolean
 ): Promise<boolean> => {
-  await apiRequest<ApiOkResponse>("/products/update.php", {
-    method: "POST",
-    body: JSON.stringify({ id: Number(id), active }),
+  const p = await getAdminProductById(String(id));
+  if (!p) throw new Error("Product not found");
+
+  await adminUpdateProduct({
+    id,
+    name_en: p.name,
+    name_ar: p.nameAr ?? p.name,
+    description_en: p.description ?? "",
+    description_ar: p.descriptionAr ?? "",
+    brand: p.brand,
+    category_id: p.categoryId,
+    price: p.price,
+    stock: p.stock,
+    active,
+    imageFile: null,
   });
+
   return true;
 };

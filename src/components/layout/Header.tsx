@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLang } from '@/context/LangContext';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import MobileMenu from './MobileMenu';
@@ -16,6 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getUnreadCount } from '@/services/notificationsService';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Header = () => {
   const { totalItems } = useCart();
@@ -23,6 +25,7 @@ const Header = () => {
   const { t } = useLang();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -31,6 +34,22 @@ const Header = () => {
       navigate(`/catalog?search=${searchQuery}`);
     }
   };
+
+  useEffect(() => {
+    const loadUnread = async () => {
+      try {
+        if (isAuthenticated && user) {
+          const count = await getUnreadCount(String(user.id));
+          setUnreadCount(count);
+        } else {
+          setUnreadCount(0);
+        }
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+    loadUnread();
+  }, [isAuthenticated, user]);
 
   return (
     <>
@@ -89,9 +108,11 @@ const Header = () => {
                 <Button variant="ghost" size="icon" className="relative" asChild>
                   <Link to="/account/notifications">
                     <Bell className="h-5 w-5" />
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs bg-primary">
-                      3
-                    </Badge>
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs bg-primary">
+                        {unreadCount}
+                      </Badge>
+                    )}
                   </Link>
                 </Button>
               )}
@@ -112,8 +133,18 @@ const Header = () => {
               <div className="hidden md:block">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <User className="h-5 w-5" />
+                    <Button variant="ghost" className="flex items-center gap-2">
+                      {isAuthenticated && user ? (
+                        <>
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={user.avatarUrl} alt={user.name} />
+                            <AvatarFallback>{user.name?.slice(0,1) || '?'}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{user.name}</span>
+                        </>
+                      ) : (
+                        <User className="h-5 w-5" />
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-popover">
@@ -121,6 +152,9 @@ const Header = () => {
                       <>
                         <DropdownMenuItem asChild>
                           <Link to="/account">{t('common.account')}</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/account/settings">{t('account.settings')}</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link to="/account/orders">{t('account.orders')}</Link>

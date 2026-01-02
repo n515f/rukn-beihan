@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
+import { getProductById } from '@/services/productsService';
+import { toast } from 'sonner';
 
 const CartSummary = () => {
-  const { totalPrice, totalItems } = useCart();
-  const { t } = useLang();
+  const { items, totalPrice, totalItems } = useCart();
+  const { t, lang } = useLang();
   const { formatPrice } = useCurrency();
   const { isVatEnabled, vatPercentage } = useTax();
   const navigate = useNavigate();
@@ -17,6 +19,40 @@ const CartSummary = () => {
   const shipping = 10.00;
   const taxAmount = isVatEnabled ? totalPrice * (vatPercentage / 100) : 0;
   const total = totalPrice + shipping + taxAmount;
+
+  const handleCheckout = async () => {
+    if (totalItems === 0) return;
+
+    try {
+      const products = await Promise.all(items.map(i => getProductById(i.id)));
+
+      for (let idx = 0; idx < items.length; idx++) {
+        const cartItem = items[idx];
+        const product = products[idx];
+
+        if (!product || !product.active) {
+          toast.error(
+            lang === 'ar' ? 'المنتج غير متاح حالياً' : 'Product is currently unavailable'
+          );
+          return;
+        }
+
+        if (cartItem.quantity > product.stock) {
+          toast.error(
+            lang === 'ar'
+              ? `الكمية المتاحة فقط ${product.stock} لهذا المنتج`
+              : `Only ${product.stock} available for this product`
+          );
+          return;
+        }
+      }
+
+      navigate('/checkout');
+    } catch (e) {
+      console.error('Stock validation failed before checkout:', e);
+      toast.error(lang === 'ar' ? 'حدث خطأ أثناء التحقق من المخزون' : 'Stock validation error');
+    }
+  };
 
   return (
     <Card>
@@ -46,7 +82,7 @@ const CartSummary = () => {
         <Button 
           className="w-full" 
           size="lg"
-          onClick={() => navigate('/checkout')}
+          onClick={handleCheckout}
           disabled={totalItems === 0}
         >
           {t('cart.checkout')}

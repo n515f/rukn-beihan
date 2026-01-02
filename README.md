@@ -1,73 +1,63 @@
-# Welcome to your Lovable project
+# Rukn Beihan Frontend
 
-## Project info
+A Vite + React + TypeScript frontend using Tailwind CSS and Radix/Shadcn UI components. This README documents local development, build, and deployment without any external UI builder tooling.
 
-**URL**: https://lovable.dev/projects/11379d2d-c8f8-45ea-a9d1-8e85bc7931c0
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/11379d2d-c8f8-45ea-a9d1-8e85bc7931c0) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+## Tech Stack
 
 - Vite
+- React 18
 - TypeScript
-- React
-- shadcn-ui
 - Tailwind CSS
+- Radix UI primitives and Shadcn components
+- React Router, TanStack Query, Recharts
 
-## How can I deploy this project?
+## Prerequisites
 
-Simply open [Lovable](https://lovable.dev/projects/11379d2d-c8f8-45ea-a9d1-8e85bc7931c0) and click on Share -> Publish.
+- Node.js 18+ and npm
 
-## Can I connect a custom domain to my Lovable project?
+## Getting Started
 
-Yes, you can!
+```sh
+# Clone repository
+git clone <YOUR_GIT_URL>
+cd rukn-beihan-frontend
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Install dependencies
+npm i
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Start development server
+npm run dev
+# Local preview: http://localhost:8080 (or next available port)
+```
+
+## Scripts
+
+- `npm run dev` — Start the Vite dev server
+- `npm run build` — Build production assets
+- `npm run build:dev` — Build in development mode
+- `npm run preview` — Preview the production build
+- `npm run lint` — Run ESLint
+
+## Configuration
+
+- `vite.config.ts` — Vite config and path aliases
+- `tailwind.config.ts` — Tailwind setup and presets
+- `tsconfig.json` — TypeScript compiler options
+
+## Environment
+
+If the app requires environment variables, create a `.env` file at the project root. For Vite, only variables prefixed with `VITE_` are exposed to the client, e.g.:
+
+```
+VITE_API_BASE_URL=https://your-api.example.com
+```
+
+## Deployment
+
+- Build using `npm run build`
+- Serve the generated `dist/` directory with your web server (e.g., Nginx, Apache, or a static host).
+
+## Notes
+
+- Shadcn UI components are included as regular React components in `src/components`; the project does not depend on any external UI builder runtime.
+- Security-sensitive features (auth, sessions, cookies) are implemented in `src/context` and `src/services`. Review `api.ts` and `AuthContext.tsx` when configuring your backend.

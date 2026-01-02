@@ -18,21 +18,21 @@ const ProductGrid = ({ products }: ProductGridProps) => {
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {products.map((product) => (
         <ProductCard
-  key={product.id}
-  id={product.id}
-  name={product.name}
-  nameAr={product.nameAr}   // ✅ جديد
-  brand={product.brand}
-  price={product.price}
-  oldPrice={product.oldPrice}
-  image={product.image}
-  rating={product.rating}
-  reviews={product.reviews}
-  stock={product.stock}
-  bestSeller={product.bestSeller}
-  isNew={product.isNew}
-/>
-
+          key={product.id}
+          id={product.id}
+          name={product.name}
+          nameAr={product.nameAr}
+          brand={product.brand}
+          price={product.price}
+          oldPrice={product.oldPrice}
+          image={product.image}
+          rating={product.rating}
+          reviews={product.reviews}
+          stock={product.stock}
+          bestSeller={product.bestSeller}
+          isNew={product.isNew}
+          active={product.active}
+        />
       ))}
     </div>
   );

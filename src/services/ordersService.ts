@@ -1,12 +1,24 @@
 // src/services/ordersService.ts
-// Orders service - now connected to PHP REST API (XAMPP)
-// Uses shared apiRequest from src/services/api.ts
+// Final version aligned with PHP api/orders + addresses (address_id)
 
 import { apiRequest, ApiOkResponse } from "./api";
+import { adminDecrementProductStock } from "./productsService";
 
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
+
+export type PaymentMethod = "cod" | "online";
+
+/** ===== UI Types (used by your pages) ===== */
 export interface OrderItem {
   productId: string;
-  name: string;
+  name: string; // UI name (prefer EN/AR if provided)
+  nameEn?: string;
+  nameAr?: string;
   quantity: number;
   price: number;
 }
@@ -14,80 +26,92 @@ export interface OrderItem {
 export interface DeliveryAddress {
   name: string;
   phone: string;
-  address: string;
+  address: string; // street
   city: string;
-  zipCode: string;
-}
-
-export interface OrderLocation {
-  type: "map" | "custom";
-  mapLink?: string;
-  address?: string;
-  city?: string;
-  zipCode?: string;
+  zipCode: string; // not in DB -> keep empty
+  locationUrl?: string | null;
 }
 
 export interface Order {
   id: string;
   userId: string;
-  date: string;
-  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+
+  // Link to addresses table
+  addressId: string | null;
+
+  date: string; // created_at
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+
+  currency: string;
+  vatAmount: number; // vat_amount
+  totalAmount: number; // total_amount
+
   items: OrderItem[];
+
+  // UI Calculated fields (to keep your current pages working)
   subtotal: number;
-  tax?: number;
   shipping: number;
   total: number;
+  tax: number;
+
+  // For UI pages (OrderDetails/AdminOrders)
   deliveryAddress: DeliveryAddress;
-  location?: OrderLocation;
-  paymentMethod: "cashOnDelivery" | "onlinePayment";
 }
 
-/**
- * ======================
- * API Response Shapes
- * ======================
- * Adjust mapping here if your PHP returns slightly different field names.
- */
-
+/** ===== API Shapes (what PHP returns) ===== */
 type ApiOrderItem = {
+  id?: number;
   product_id: number;
-  name?: string | null; // optional (sometimes you only have product_id)
   quantity: number;
   price: number;
+
+  // get.php may return these from products join
+  name_en?: string | null;
+  name_ar?: string | null;
 };
 
-type ApiOrderAddress = {
+type ApiAddress = {
+  id: number;
+  user_id?: number;
   full_name?: string | null;
   phone?: string | null;
-  street?: string | null;
-  address?: string | null; // some APIs use "address"
   city?: string | null;
-  zip_code?: string | null;
-  map_link?: string | null;
+  street?: string | null;
+  location_url?: string | null;
+  is_default?: boolean | number | null;
+  created_at?: string | null;
 };
 
+// This shape supports both:
+// 1) order.address = {...} (recommended)
+// 2) flattened address fields on order (fallback)
 type ApiOrder = {
   id: number;
   user_id: number;
+  address_id?: number | null;
+
+  total_amount: number;
+  currency?: string | null;
+  vat_amount?: number | null;
+
+  status: OrderStatus;
+  payment_method?: PaymentMethod | null;
+
   created_at?: string | null;
-  date?: string | null; // some APIs use "date"
-  status: Order["status"];
 
-  payment_method?: "cashOnDelivery" | "onlinePayment" | "cod" | "online";
-  subtotal: number;
-  tax?: number | null;
-  shipping: number;
-  total: number;
+  // Preferred: nested address
+  address?: ApiAddress | null;
 
-  address?: ApiOrderAddress | null;
-  delivery_address?: ApiOrderAddress | null; // alternate name
-  location_type?: "map" | "custom" | null;
-  location_map_link?: string | null;
-  location_address?: string | null;
-  location_city?: string | null;
-  location_zip_code?: string | null;
+  // Fallback: flattened
+  full_name?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  street?: string | null;
+  location_url?: string | null;
 
-  items?: ApiOrderItem[]; // sometimes included
+  // Sometimes list.php includes items; if not, ignore
+  items?: ApiOrderItem[];
 };
 
 type ApiOrdersListResponse = {
@@ -97,7 +121,8 @@ type ApiOrdersListResponse = {
 
 type ApiOrderGetResponse = {
   success: boolean;
-  order: ApiOrder & { items: ApiOrderItem[] };
+  order: ApiOrder;
+  items: ApiOrderItem[];
 };
 
 type ApiCreateOrderResponse = {
@@ -105,96 +130,107 @@ type ApiCreateOrderResponse = {
   order_id: number;
 };
 
-function normalizePaymentMethod(
-  pm?: ApiOrder["payment_method"]
-): Order["paymentMethod"] {
-  if (!pm) return "cashOnDelivery";
-  if (pm === "cod") return "cashOnDelivery";
-  if (pm === "online") return "onlinePayment";
-  return pm;
+/** ===== Helpers ===== */
+function toNumber(v: unknown, fallback = 0): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
-function mapApiOrderToUI(o: ApiOrder, itemsFallback: ApiOrderItem[] = []): Order {
-  const items = (o.items ?? itemsFallback ?? []).map((it) => ({
-    productId: String(it.product_id),
-    name: it.name ?? `Product #${it.product_id}`,
-    quantity: Number(it.quantity),
-    price: Number(it.price),
-  }));
-
-  const addr = o.delivery_address ?? o.address ?? null;
-
-  const deliveryAddress: DeliveryAddress = {
-    name: addr?.full_name ?? "",
-    phone: addr?.phone ?? "",
-    address: addr?.street ?? addr?.address ?? "",
-    city: addr?.city ?? "",
-    zipCode: addr?.zip_code ?? "",
-  };
-
-  const location: OrderLocation | undefined =
-    o.location_type === "map" || o.location_type === "custom"
-      ? {
-          type: o.location_type,
-          mapLink: o.location_map_link ?? addr?.map_link ?? undefined,
-          address: o.location_address ?? deliveryAddress.address,
-          city: o.location_city ?? deliveryAddress.city,
-          zipCode: o.location_zip_code ?? deliveryAddress.zipCode,
-        }
-      : // if your address includes map_link and you want to expose it:
-      addr?.map_link
-      ? {
-          type: "map",
-          mapLink: addr.map_link,
-          address: deliveryAddress.address,
-          city: deliveryAddress.city,
-          zipCode: deliveryAddress.zipCode,
-        }
-      : undefined;
-
-  const date = o.created_at ?? o.date ?? new Date().toISOString();
+function mapItem(it: ApiOrderItem): OrderItem {
+  const nameEn = it.name_en ?? undefined;
+  const nameAr = it.name_ar ?? undefined;
 
   return {
-    id: String(o.id),
-    userId: String(o.user_id),
-    date,
-    status: o.status,
-    items,
-    subtotal: Number(o.subtotal),
-    tax: o.tax == null ? undefined : Number(o.tax),
-    shipping: Number(o.shipping),
-    total: Number(o.total),
-    deliveryAddress,
-    location,
-    paymentMethod: normalizePaymentMethod(o.payment_method),
+    productId: String(it.product_id),
+    name: nameEn ?? nameAr ?? `Product #${it.product_id}`,
+    nameEn,
+    nameAr,
+    quantity: toNumber(it.quantity, 1),
+    price: toNumber(it.price, 0),
   };
 }
 
-/**
- * ======================
- * Public (User)
- * ======================
- */
+function mapDeliveryAddress(order: ApiOrder): DeliveryAddress {
+  const a = order.address ?? null;
 
+  const name = String(a?.full_name ?? order.full_name ?? "");
+  const phone = String(a?.phone ?? order.phone ?? "");
+  const city = String(a?.city ?? order.city ?? "");
+  const street = String(a?.street ?? order.street ?? "");
+  const locationUrl = (a?.location_url ?? order.location_url ?? null) as
+    | string
+    | null;
+
+  return {
+    name,
+    phone,
+    city,
+    address: street,
+    zipCode: "", // your DB doesn't have zip_code
+    locationUrl,
+  };
+}
+
+function mapOrder(order: ApiOrder, itemsFallback: ApiOrderItem[] = []): Order {
+  const items = (order.items ?? itemsFallback ?? []).map(mapItem);
+
+  const totalAmount = toNumber(order.total_amount, 0);
+  const vatAmount = toNumber(order.vat_amount, 0);
+
+  // Keep your UI assumptions:
+  const shipping = totalAmount > 0 ? 15 : 0;
+  const subtotal = Math.max(0, totalAmount - vatAmount - shipping);
+
+  const createdAt = order.created_at ?? new Date().toISOString();
+  const paymentMethod = (order.payment_method ?? "cod") as PaymentMethod;
+
+  return {
+    id: String(order.id),
+    userId: String(order.user_id),
+    addressId:
+      order.address_id == null ? null : String(order.address_id),
+
+    date: createdAt,
+    status: order.status,
+    paymentMethod,
+
+    currency: String(order.currency ?? "SAR"),
+    vatAmount,
+    totalAmount,
+
+    items,
+
+    subtotal,
+    shipping,
+    total: totalAmount,
+    tax: vatAmount,
+
+    deliveryAddress: mapDeliveryAddress(order),
+  };
+}
+
+/** ===== USER ===== */
 export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
+  const id = Number(userId);
+  if (!Number.isFinite(id)) return [];
+
   const data = await apiRequest<ApiOrdersListResponse>(
-    `/orders/list.php?user_id=${encodeURIComponent(userId)}`
+    `/orders/list.php?user_id=${encodeURIComponent(String(id))}`
   );
-  return (data.orders ?? []).map((o) => mapApiOrderToUI(o));
+
+  return (data.orders ?? []).map((o) => mapOrder(o));
 };
 
 export const getOrderById = async (orderId: string): Promise<Order | null> => {
-  const numericId = Number(orderId);
-  if (!Number.isFinite(numericId)) return null;
+  const id = Number(orderId);
+  if (!Number.isFinite(id)) return null;
 
   try {
     const data = await apiRequest<ApiOrderGetResponse>(
-      `/orders/get.php?id=${encodeURIComponent(String(numericId))}`
+      `/orders/get.php?id=${encodeURIComponent(String(id))}`
     );
 
-    // Ensure items are present
-    const order = mapApiOrderToUI(data.order, data.order.items ?? []);
-    return order;
+    return mapOrder(data.order, data.items ?? []);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     if (msg.includes("404") || msg.toLowerCase().includes("not found")) return null;
@@ -202,83 +238,59 @@ export const getOrderById = async (orderId: string): Promise<Order | null> => {
   }
 };
 
-export const createOrder = async (
-  orderData: Omit<Order, "id" | "date">
-): Promise<Order> => {
-  /**
-   * We send a backend-friendly payload.
-   * Adjust keys to match your PHP create.php expectation.
-   */
-  const payload = {
-    user_id: Number(orderData.userId),
-    status: orderData.status,
-    payment_method: orderData.paymentMethod,
-    subtotal: orderData.subtotal,
-    tax: orderData.tax ?? 0,
-    shipping: orderData.shipping,
-    total: orderData.total,
-
-    address: {
-      full_name: orderData.deliveryAddress.name,
-      phone: orderData.deliveryAddress.phone,
-      street: orderData.deliveryAddress.address,
-      city: orderData.deliveryAddress.city,
-      zip_code: orderData.deliveryAddress.zipCode,
-    },
-
-    location: orderData.location
-      ? {
-          type: orderData.location.type,
-          map_link: orderData.location.mapLink ?? null,
-          address: orderData.location.address ?? null,
-          city: orderData.location.city ?? null,
-          zip_code: orderData.location.zipCode ?? null,
-        }
-      : null,
-
-    items: orderData.items.map((it) => ({
-      product_id: Number(it.productId),
-      name: it.name,
-      quantity: it.quantity,
-      price: it.price,
-    })),
-  };
-
+/**
+ * Create order (MUST send address_id because orders table has address_id)
+ * Matches your PHP create.php expected keys:
+ * user_id, address_id, items[], total_amount, currency, vat_amount, payment_method
+ */
+export const createOrder = async (payload: {
+  user_id: number | string;
+  address_id: number | string;
+  items: { product_id: number | string; quantity: number; price: number }[];
+  total_amount: number;
+  vat_amount?: number;
+  currency?: string;
+  payment_method?: PaymentMethod;
+}): Promise<{ orderId: string }> => {
   const res = await apiRequest<ApiCreateOrderResponse>("/orders/create.php", {
     method: "POST",
-    body: JSON.stringify(payload),
-  });
-
-  // Return a UI Order similar to old behavior, but with real order_id
-  return {
-    ...orderData,
-    id: String(res.order_id),
-    date: new Date().toISOString(),
-  };
-};
-
-/**
- * ======================
- * Admin
- * ======================
- */
-
-export const getAllOrders = async (): Promise<Order[]> => {
-  const data = await apiRequest<ApiOrdersListResponse>("/orders/list.php");
-  return (data.orders ?? []).map((o) => mapApiOrderToUI(o));
-};
-
-export const updateOrderStatus = async (
-  orderId: string,
-  status: Order["status"]
-): Promise<boolean> => {
-  await apiRequest<ApiOkResponse>("/orders/update-status.php", {
-    method: "POST",
     body: JSON.stringify({
-      id: Number(orderId),
-      status,
+      user_id: Number(payload.user_id),
+      address_id: Number(payload.address_id),
+      items: payload.items.map((it) => ({
+        product_id: Number(it.product_id),
+        quantity: toNumber(it.quantity, 1),
+        price: toNumber(it.price, 0),
+      })),
+      total_amount: toNumber(payload.total_amount, 0),
+      vat_amount: toNumber(payload.vat_amount ?? 0, 0),
+      currency: payload.currency ?? "SAR",
+      payment_method: payload.payment_method ?? "cod",
     }),
   });
 
-  return true;
+  return { orderId: String(res.order_id) };
+};
+
+/** ===== ADMIN ===== */
+export const getAllOrders = async (): Promise<Order[]> => {
+  const data = await apiRequest<ApiOrdersListResponse>("/orders/list.php");
+  return (data.orders ?? []).map((o) => mapOrder(o));
+};
+
+export const updateOrderStatus = async (
+  orderId: number | string,
+  status: OrderStatus
+): Promise<void> => {
+  // Backend handles stock_reserved logic; send JSON with text status
+  try {
+    await apiRequest<ApiOkResponse>("/orders/update-status.php", {
+      method: "POST",
+      body: JSON.stringify({ id: Number(orderId), status }),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    // Rethrow the server message so UI can show it (e.g., 422 validation)
+    throw new Error(msg);
+  }
 };

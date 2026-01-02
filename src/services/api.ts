@@ -1,6 +1,4 @@
 // src/services/api.ts
-// Shared API utilities & common types for your PHP REST API (XAMPP).
-
 export const API_BASE =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost/rukn-api/api";
 
@@ -37,14 +35,16 @@ export type ApiAuthRegisterResponse = {
   success: boolean;
   user_id: number;
 };
-
 // =======================================================
 
 function buildHeaders(options: RequestInit): HeadersInit {
   const headers: Record<string, string> = {};
 
-  // Only set JSON content-type when we send a body
-  if (options.body != null) {
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  // لا تضع Content-Type عند FormData (المتصفح يضع boundary تلقائياً)
+  if (options.body != null && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -60,7 +60,7 @@ export async function apiRequest<T>(
 
   try {
     res = await fetch(`${API_BASE}${path}`, {
-      credentials: "include", // IMPORTANT for PHP sessions
+      credentials: "include", // مهم لجلسات PHP
       ...options,
       headers: buildHeaders(options),
     });
